@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from data_access_layer.connections import Connection
 
 
-class RDBMSConnection(Connection, ABC):
+class OLTPConnection(Connection, ABC):
     
     def __init__(self, name: str, host: str, port: int, database: str, username: str, password: str,
                  ssl_keyfile_path: str = None, ssl_certfile_path: str = None, ssl_ca_certs: str = None):

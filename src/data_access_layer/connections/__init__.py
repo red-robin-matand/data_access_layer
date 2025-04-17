@@ -1,5 +1,5 @@
 from .connection import Connection
-from .rdbms_connection import RDBMSConnection
+from .oltp_connection import OLTPConnection
 from .stream_connection import StreamConnection
 from .object_store_connection import ObjectStoreConnection
 
@@ -12,7 +12,7 @@ from .kafka_producer_connection import KafkaProducerConnection
 
 from .connections_factory import ConnectionsFactory
 from .connections_parser import ConnectionsConfigurationParser
-
+from .connection_manager import ConnectionManager
 
 CONNECTION_TYPES = {
     "s3": S3Connection,
