@@ -11,13 +11,13 @@ from .postgresql_connection import PostgreSQLConnection
 from .kafka_consumer_connection import KafkaConsumerConnection
 from .kafka_producer_connection import KafkaProducerConnection
 
-from .connections_factory import ConnectionsFactory
-from .connections_parser import ConnectionsConfigurationParser
-from .connection_manager import ConnectionManager
-
 CONNECTION_TYPES = {
     "s3": S3Connection,
     "kafka_consumer": KafkaConsumerConnection,
     "kafka_producer": KafkaProducerConnection,
     "postgresql": PostgreSQLConnection,
 }
+
+from .connections_factory import ConnectionsFactory
+from .connections_parser import ConnectionsConfigurationParser
+from .connection_manager import ConnectionManager
