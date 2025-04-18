@@ -3,6 +3,7 @@ import pandas as pd
 
 from data_access_layer.datasources import DataSource
 from data_access_layer.connections import OLTPConnection
+from sqlalchemy.orm import Session
 
 
 class OLTPDataSource(DataSource, ABC):
@@ -28,7 +29,7 @@ class OLTPDataSource(DataSource, ABC):
 
         return model
 
-    def get_new_session(self):
+    def get_new_session(self) -> Session:
         return self._connection.get_new_session()
 
     @property

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from sqlalchemy import exc, text, MetaData
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 from data_access_layer.connections import Connection
 
@@ -38,7 +38,7 @@ class OLTPConnection(Connection, ABC):
     def automap_base_model(self):
         return self._automap_base_model
 
-    def get_new_session(self):
+    def get_new_session(self) -> Session:
         return self._session_maker()
 
     def connect(self) -> None:
