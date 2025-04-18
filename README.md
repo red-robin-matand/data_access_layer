@@ -1,6 +1,6 @@
 # Data Access Layer
 
-A Python library that provides a unified interface for connecting to different data sources: object stores (S3), streaming platforms (Kafka), and relational databases. It uses a factory pattern to create connections based on YAML configuration.
+A Python library that provides a unified interface for connecting to different data sources: object stores (S3), streaming platforms (Kafka), and relational databases (PostgreSQL). It uses a factory pattern to create connections based on YAML configuration.
 
 ## Installation
 
@@ -14,39 +14,64 @@ pip install data_access_layer
 
 ```yaml
 connections:
-  - type: "s3"
-    name: "my-s3"
-    access_key: "your-access-key"
-    secret_key: "your-secret-key"
-    region: "my-region"
-    connections: 10
-    bucket: "my-bucket"
+  - name: postgresql_name
+    type: postgresql
+    username: YOUR_USERNAME
+    password: YOUR_PASSWORD
+    host: YOUR_HOST
+    database: YOUR_DATABASE
+    ssl:
+      ca: PATH_TO_YOUR_CA_CERTIFICATE
+      cert: PATH_TO_YOUR_CLIENT_CERTIFICATE  # Optional
+      key: PATH_TO_YOUR_CLIENT_KEY  # Optional
 
-  - type: "kafka_producer"
-    name: "my-producer"
-    broker: "localhost:9092"
-    topic: "my-topic"
-
-  - type: "kafka_consumer"
-    name: "my-consumer"
-    broker: "localhost:9092"
-    topic: "my-topic"
-    group_id: "my-group"
-    offset: "earliest"
+  - name: s3_name
+    type: s3
+    access_key: YOUR_S3_ACCESS_KEY
+    secret_key: YOUR_S3_SECRET_KEY
+    region: YOUR_S3_REGION
+    connections : N_CONNECTIONS
+    bukcet : YOUR_BUCKET_NAME
 ```
 
 2. Set the environment variable for your config:
 
 ```sh
+# For Windows
+set CONNECTIONS_YAML=C:\path\to\your\connections.yaml
+
+# For Linux/Mac
 export CONNECTIONS_YAML=/path/to/your/connections.yaml
 ```
 
+3. Use the DataSourceManager to interact with your data sources:
+
+```python
+from data_access_layer.manager import DataSourceManager
+
+# Initialize the manager
+manager = DataSourceManager()
+pg_datasource = manager.get_data_source("my-postgres")
+
+data_entity_key = "my_table"
+data = {
+  "column1" : value1,
+  "column2" : value2,
+}
+
+pg_datasource.insert(
+  data_entity_key=data_entity_key,
+  data=data,
+)
+```
 
 ## Supported Connection Types
 
 - `s3`: Amazon S3 connections using boto3
 - `kafka_producer`: Kafka producer connections using confluent-kafka
 - `kafka_consumer`: Kafka consumer connections using confluent-kafka
+- `postgresql`: PostgreSQL connections using SQLAlchemy
+
 
 
 ## License
