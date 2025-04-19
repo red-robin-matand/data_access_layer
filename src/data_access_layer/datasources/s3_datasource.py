@@ -3,6 +3,8 @@ from data_access_layer.connections import S3Connection
 from data_access_layer.datasources.exceptions import ObjectStoreDatasourceError
 
 from tqdm.auto import tqdm
+from boto3.s3.transfer import TransferConfig, S3Transfer
+import os
 
 
 class S3DataSource(ObjectStoreDataSource):
@@ -11,6 +13,43 @@ class S3DataSource(ObjectStoreDataSource):
         super().__init__(connection)
 
         self._bucket = connection._bucket
+
+        self._large_file_transfer_config: TransferConfig = None
+        self._huge_file_transfer_config: TransferConfig = None
+
+        self._small_file_threshold: int = None
+        self._large_file_threshold: int = None
+        self._huge_file_threshold: int = None
+
+        self._set_file_thresholds()
+        self._set_transfer_configs()
+
+    def _set_file_thresholds(self) -> None:
+
+        self._small_file_threshold = 1024 * 1024 * 5
+        self._large_file_threshold = 1024 * 1024 * 100  # 100 MB
+        self._huge_file_threshold = 1024 * 1024 * 500  # 500 MB
+
+    def _set_transfer_configs(self) -> None:
+
+        mb = 1024 * 1024
+        multipart_chunksize = 10 * mb
+        max_concurrency = 10
+        use_threads = True
+
+        self._large_file_transfer_config = TransferConfig(
+            multipart_threshold=5*mb,
+            max_concurrency=max_concurrency,
+            multipart_chunksize=multipart_chunksize,
+            use_threads=use_threads,
+        )
+
+        self._huge_file_transfer_config = TransferConfig(
+            multipart_threshold=100*mb,
+            max_concurrency=max_concurrency,
+            multipart_chunksize=multipart_chunksize,
+            use_threads=use_threads,
+        )
 
     def get_object(self, object_name: str) -> str:
         try:
@@ -30,15 +69,29 @@ class S3DataSource(ObjectStoreDataSource):
             raise ObjectStoreDatasourceError(message)
 
     def upload_file(self, file_path: str, object_name: str) -> None:
-        try:
-            self._connection_engine.upload_file(
-                file_path,
-                self._bucket,
-                object_name,
+
+        file_size = os.path.getsize(file_path)
+
+        if file_size <= self._small_file_threshold:
+
+            self._upload_small_file(
+                file_path=file_path,
+                object_name=object_name,
             )
-        except Exception as e:
-            message = f"Error uploading file {file_path} to S3: {str(e)}"
-            raise ObjectStoreDatasourceError(message)
+            return
+
+        if file_size <= self._large_file_threshold:
+            self._upload_large_file(
+                file_path=file_path,
+                object_name=object_name,
+            )
+            return
+
+        self._upload_huge_file(
+            file_path=file_path,
+            object_name=object_name,
+            file_size=file_size,
+        )
 
     def download_file(self, object_name: str, download_path: str) -> None:
         try:
@@ -109,4 +162,45 @@ class S3DataSource(ObjectStoreDataSource):
             return result
         except Exception as e:
             message = f"Error reading metadata for file {object_name} from S3: {str(e)}"
+            raise ObjectStoreDatasourceError(message)
+
+    def _upload_small_file(self, file_path: str, object_name: str) -> None:
+        try:
+            self._connection_engine.upload_file(
+                file_path,
+                self._bucket,
+                object_name,
+            )
+        except Exception as e:
+            message = f"Error uploading small file {file_path} to S3: {str(e)}"
+            raise ObjectStoreDatasourceError(message)
+
+    def _upload_large_file(self, file_path: str, object_name: str) -> None:
+        try:
+            self._connection_engine.upload_file(
+                file_path,
+                self._bucket,
+                object_name,
+                Config=self._large_file_transfer_config,
+            )
+        except Exception as e:
+            message = f"Error uploading large file {file_path} to S3: {str(e)}"
+            raise ObjectStoreDatasourceError(message)
+
+    def _upload_huge_file(self, file_path: str, object_name: str, file_size: int) -> None:
+        try:
+            with tqdm(total=file_size, unit='B', unit_scale=True, desc="Uploading") as progress_bar:
+                def progress_callback(bytes_transferred):
+                    progress_bar.update(bytes_transferred)
+
+                s3_transfer = S3Transfer(
+                    self._connection_engine, self._huge_file_transfer_config)
+                s3_transfer.upload_file(
+                    file_path,
+                    self._bucket,
+                    object_name,
+                    callback=progress_callback,
+                )
+        except Exception as e:
+            message = f"Error uploading huge file {file_path} to S3: {str(e)}"
             raise ObjectStoreDatasourceError(message)
