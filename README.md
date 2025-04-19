@@ -30,8 +30,20 @@ connections:
     access_key: YOUR_S3_ACCESS_KEY
     secret_key: YOUR_S3_SECRET_KEY
     region: YOUR_S3_REGION
-    connections : N_CONNECTIONS
-    bukcet : YOUR_BUCKET_NAME
+    connections: N_CONNECTIONS
+    bukcet: YOUR_BUCKET_NAME
+
+  - name: kafka_consumer_name
+    type: kafka_consumer
+    broker: YOUR_BROKER
+    topic: YOUR_TOPIC
+    group_id: YOUR_GROUP
+    offest: YOUR_OFFEST
+
+  - name: kafka_producer_name
+    type: kafka_producer
+    broker: YOUR_BROKER
+    topic: YOUR_TOPIC
 ```
 
 2. Set the environment variable for your config:
