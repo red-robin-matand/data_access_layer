@@ -94,15 +94,21 @@ class S3DataSource(ObjectStoreDataSource):
         )
 
     def download_file(self, object_name: str, download_path: str) -> None:
-        try:
-            self._connection_engine.download_file(
-                self._bucket,
-                object_name,
-                download_path
+
+        file_size = self.get_object_size(object_name)
+
+        if file_size <= self._small_file_threshold:
+
+            self._download_small_file(
+                object_name=object_name,
+                download_path=download_path,
             )
-        except Exception as e:
-            message = f"Error downloading file {object_name} from S3: {str(e)}"
-            raise ObjectStoreDatasourceError(message)
+            return
+
+        self._download_large_file(
+            object_name=object_name,
+            download_path=download_path,
+        )
 
     def list_files(self, prefix: str = '', list_all: bool = True) -> list:
         try:
@@ -203,6 +209,30 @@ class S3DataSource(ObjectStoreDataSource):
                 )
         except Exception as e:
             message = f"Error uploading huge file {file_path} to S3: {str(e)}"
+            raise ObjectStoreDatasourceError(message)
+
+    def _download_small_file(self, object_name: str, download_path: str) -> None:
+        try:
+            self._connection_engine.download_file(
+                self._bucket,
+                object_name,
+                download_path,
+            )
+        except Exception as e:
+            message = f"Error downloading small file {object_name} from S3: {str(e)}"
+            raise ObjectStoreDatasourceError(message)
+
+    def _download_large_file(self, object_name: str, download_path: str) -> None:
+        try:
+            transfer = S3Transfer(self._connection_engine,
+                                  self._large_file_transfer_config)
+            transfer.download_file(
+                self._bucket,
+                object_name,
+                download_path,
+            )
+        except Exception as e:
+            message = f"Error downloading large file {object_name} from S3: {str(e)}"
             raise ObjectStoreDatasourceError(message)
 
     def get_object_size(self, object_name: str) -> int:
