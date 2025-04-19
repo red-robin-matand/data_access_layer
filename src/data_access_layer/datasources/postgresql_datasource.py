@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.sql import text
 from sqlalchemy.sql import and_, or_
-
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, Query
 
 from data_access_layer.connections import PostgreSQLConnection
@@ -184,3 +184,38 @@ class PostgreSQLDataSource(OLTPDataSource):
             session.close()
 
     def insert_dataframe(self, data_entity_key: str, data: pd.DataFrame) -> None:
+        session = self.get_new_session()
+        try:
+            model = self.get_model(data_entity_key)
+            instances = [model(**row.to_dict()) for _, row in data.iterrows()]
+            session.add_all(instances)
+            session.commit()
+        finally:
+            session.close()
+
+    def upsert_dataframe_bulk(self, data_entity_key: str, data: pd.DataFrame, condition_columns: list) -> None:
+        session = self.get_new_session()
+        try:
+            model = self.get_model(data_entity_key)
+            table = model.__table__
+            records = data.to_dict(orient="records")
+
+            if set(condition_columns) == set(data.columns):
+                statement = insert(table).values(records).on_conflict_do_nothing(
+                    index_elements=condition_columns
+                )
+            else:
+                statement = insert(table).values(records)
+                statement = statement.on_conflict_do_update(
+                    index_elements=condition_columns,
+                    set_={
+                        col: getattr(statement.excluded, col)
+                        for col in data.columns
+                        if col not in condition_columns
+                    }
+                )
+
+            session.execute(statement)
+            session.commit()
+        finally:
+            session.close()
