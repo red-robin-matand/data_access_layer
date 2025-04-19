@@ -204,3 +204,12 @@ class S3DataSource(ObjectStoreDataSource):
         except Exception as e:
             message = f"Error uploading huge file {file_path} to S3: {str(e)}"
             raise ObjectStoreDatasourceError(message)
+
+    def get_object_size(self, object_name: str) -> int:
+        try:
+            metadata = self._connection_engine.head_object(
+                Bucket=self._bucket, Key=object_name)
+            return metadata['ContentLength']
+        except Exception as e:
+            message = f"Error getting size of object {object_name} from S3: {str(e)}"
+            raise ObjectStoreDatasourceError(message)
