@@ -15,26 +15,6 @@ class KafkaConnection(StreamConnection, ABC):
         )
         self._connection_engine: confluent_kafka.Client = None
 
-    class KafkaConfigKeys(StreamConnection.ConfigKeys):
-        NAME = 'name'
-        BROKER = 'broker'
-        TOPIC = 'topic'
-
-        @classmethod
-        def required_keys(cls):
-            return [member.value for member in cls]
-
-    @classmethod
-    def from_dict(cls, config: dict):
-        config_keys = cls.KafkaConfigKeys.required_keys()
-        cls.validate_dict_keys(config, config_keys)
-
-        return cls(
-            name=config[cls.KafkaConfigKeys.NAME.value],
-            broker=config[cls.KafkaConfigKeys.BROKER.value],
-            topic=config[cls.KafkaConfigKeys.TOPIC.value],
-        )
-
     def check_health(self) -> bool:
         if not self._connection_engine:
             return False
