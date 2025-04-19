@@ -165,3 +165,22 @@ class PostgreSQLDataSource(OLTPDataSource):
             return session.query(query.exists()).scalar()
         finally:
             session.close()
+
+    def upsert(self, data_entity_key: str, data: dict, structured_conditions: dict = None, raw_condition: str = None) -> bool:
+        session = self.get_new_session()
+        try:
+            query = self._prepare_query(
+                session, data_entity_key, structured_conditions, raw_condition)
+            instance = query.first()
+            if instance:
+                for key, value in data.items():
+                    setattr(instance, key, value)
+            else:
+                instance = self.get_model(data_entity_key)(**data)
+                session.add(instance)
+            session.commit()
+            return True
+        finally:
+            session.close()
+
+    def insert_dataframe(self, data_entity_key: str, data: pd.DataFrame) -> None:
