@@ -5,7 +5,6 @@ from data_access_layer.connections import OLTPConnection
 
 
 class PostgreSQLConnection(OLTPConnection):
-    
 
     class PostgreSQLConfigKeys(Connection.ConfigKeys):
         NAME = 'name'
@@ -41,7 +40,7 @@ class PostgreSQLConnection(OLTPConnection):
 
     @classmethod
     def from_dict(cls, config: str):
-        
+
         required_config_keys = cls.PostgreSQLConfigKeys.required_keys()
         cls.validate_dict_keys(config, required_config_keys)
 
@@ -75,10 +74,10 @@ class PostgreSQLConnection(OLTPConnection):
             self.create_connection_string(), connect_args=ssl_args)
 
     def create_connection_string(self) -> str:
-        
+
         return f"postgresql+psycopg2://{self._username}:{self._password}@{self._host}:{self._port}/{self._database}"
 
     def disconnect(self):
-        
+
         if self._connection_engine:
             self._connection_engine.dispose()
