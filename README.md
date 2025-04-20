@@ -44,6 +44,12 @@ connections:
     type: kafka_producer
     broker: YOUR_BROKER
     topic: YOUR_TOPIC
+    config:
+      acks: YOUR_ACKNOWLEDGE
+      retries: N_RETRIES
+      retry_backoff_ms: YOUR_BACKOFF
+      compression_type: YOUR_COMPRESSION
+
 ```
 
 2. Set the environment variable for your config:
