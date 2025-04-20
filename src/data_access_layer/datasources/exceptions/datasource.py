@@ -17,3 +17,33 @@ class OLTPDatasourceError(DatasourceException):
     def __init__(self, message):
         
         super().__init__(message)
+
+class StreamDatasourceError(DatasourceException):
+
+    def __init__(self, message):
+        
+        super().__init__(message)
+
+class KafkaDatasourceError(StreamDatasourceError):
+
+    def __init__(self, message):
+        
+        super().__init__(message)
+
+class KafkaProducerDatasourceError(KafkaDatasourceError):
+
+    def __init__(self, message):
+        
+        super().__init__(message)
+
+class MessageDeliveryError(KafkaProducerDatasourceError):
+
+    def __init__(self, message):
+        
+        super().__init__(message)
+
+class KafkaConsumerDatasourceError(DatasourceException):
+
+    def __init__(self, message):
+        
+        super().__init__(message)
