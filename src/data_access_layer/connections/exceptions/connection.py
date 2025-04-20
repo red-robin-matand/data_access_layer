@@ -20,3 +20,9 @@ class MissingConfigurationKey(ConnectionException):
     def __init__(self, message):
         
         super().__init__(message)
+
+class DisconnectFailed(ConnectionException):
+
+    def __init__(self, message):
+        
+        super().__init__(message)
