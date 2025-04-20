@@ -2,6 +2,7 @@ import confluent_kafka
 from data_access_layer.connections import KafkaConnection
 from data_access_layer.connections.exceptions import DisconnectFailed
 
+
 class KafkaProducerConnection(KafkaConnection):
 
     class KafkaConfigKeys(KafkaConnection.ConfigKeys):
@@ -49,16 +50,20 @@ class KafkaProducerConnection(KafkaConnection):
             name=config[cls.KafkaConfigKeys.NAME.value],
             broker=config[cls.KafkaConfigKeys.BROKER.value],
             topic=config[cls.KafkaConfigKeys.TOPIC.value],
-            acks=producer_config.get(cls.KafkaConfigKeys.CONFIG_ACKS.value, 'all'),
-            retries=producer_config.get(cls.KafkaConfigKeys.CONFIG_RETRIES.value, 3),
-            retry_backoff_ms=producer_config.get(cls.KafkaConfigKeys.CONFIG_RETRY_BACKOFF.value, 1000),
-            compression_type=producer_config.get(cls.KafkaConfigKeys.CONFIG_COMPRESSION.value, 'snappy')
+            acks=producer_config.get(
+                cls.KafkaConfigKeys.CONFIG_ACKS.value, 'all'),
+            retries=producer_config.get(
+                cls.KafkaConfigKeys.CONFIG_RETRIES.value, 3),
+            retry_backoff_ms=producer_config.get(
+                cls.KafkaConfigKeys.CONFIG_RETRY_BACKOFF.value, 1000),
+            compression_type=producer_config.get(
+                cls.KafkaConfigKeys.CONFIG_COMPRESSION.value, 'snappy')
         )
-    
+
     def connect(self):
         if not self._connection_engine:
             self._create_engine()
-            
+
     def disconnect(self) -> None:
         if self._connection_engine:
             try:

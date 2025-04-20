@@ -1,6 +1,7 @@
 import confluent_kafka
 from data_access_layer.connections import KafkaConnection
 
+
 class KafkaConsumerConnection(KafkaConnection):
     def __init__(self, name: str, broker: str, topic: str, group_id: str, offset: str) -> None:
         super().__init__(
@@ -11,7 +12,7 @@ class KafkaConsumerConnection(KafkaConnection):
         self._group_id = group_id
         self._offset = offset
         self._connection_engine: confluent_kafka.Consumer = None
-    
+
     class KafkaConfigKeys(KafkaConnection.ConfigKeys):
         NAME = 'name'
         BROKER = 'broker'
@@ -52,7 +53,7 @@ class KafkaConsumerConnection(KafkaConnection):
             'auto.offset.reset': self._offset,
         }
         self._connection_engine = confluent_kafka.Consumer(config)
-        
+
         try:
             self._connection_engine.subscribe([self._topic])
         except Exception as e:
