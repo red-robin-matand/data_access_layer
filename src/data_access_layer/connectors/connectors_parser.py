@@ -2,7 +2,7 @@ import yaml
 
 from data_access_layer.connectors import ConnectorsFactory
 
-class ConnectorConfigurationParser:
+class ConnectorsConfigurationParser:
     def __init__(self, connectors_factory: ConnectorsFactory):
         
         self._connectors_factory = connectors_factory
@@ -17,7 +17,7 @@ class ConnectorConfigurationParser:
             connector_type = connector_config['type']
             connector = self._connectors_factory.create(
                 connector_type=connector_type, 
-                config=connector_config
+                config=connector_config,
             )
             connectors.append(connector)
 
