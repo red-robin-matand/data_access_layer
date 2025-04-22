@@ -4,6 +4,7 @@ connections:
     username: order_service
     password: pass
     host: orders-db.example.com
+    port: 5432
     database: orders_db
     ssl:
       ca: /path/to/ca.crt
@@ -15,23 +16,18 @@ connections:
     broker: kafka.example.com:9092
     topic: raw_orders
     group_id: order_processor
-    offset: latest
+    offset: earliest
 
   - name: s3_order_archive
     type: s3
-    access_key: key
-    secret_key: secret
+    access_key: YOUR_ACCESS_KEY
+    secret_key: YOUR_SECRET_KEY
     region: us-east-1
     connections: 5
     bucket: order-archives
 
 connectors:
-  - name: orders_to_postgresql
-    type: kafka_to_postgresql
-    kafka_consumer: kafka_orders_stream
-    sink: postgresql_orders
-
   - name: orders_to_s3
-    type: kafka_to_s3
-    kafka_consumer: kafka_orders_stream
-    sink: s3_order_archive
+    type: s3_sink
+    source_name: kafka_orders_stream
+    sink_name: s3_order_archive
