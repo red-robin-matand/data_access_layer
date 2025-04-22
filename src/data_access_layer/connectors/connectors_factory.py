@@ -1,24 +1,22 @@
+from data_access_layer.connectors.exceptions import UnknownConnectorType
 from data_access_layer.connectors import Connector
 
 
 class ConnectorsFactory:
-    _registered_connectors = {}
+    
+    def __init__(self):
 
-    @classmethod
-    def register_connector(cls, connector_type: str, connector_cls: Connector) -> None:
-        cls._registered_connectors[connector_type] = connector_cls
+        self._creators = {}
 
-    @classmethod
-    def create_connector(cls, connector_type: str, name: str, kafka_consumer_datasource_name: str, data_sink_name: str) -> Connector:
+    def register_type(cls, connector_type: str, creator: Connector) -> None:
+        
+        cls._creators[connector_type] = creator
 
-        connector_cls = cls._registered_connectors.get(connector_type)
+    def create(self, connection_type: str, config: dict) -> Connector:
+        
+        creator: Connector = self._creators.get(connection_type)
+        if not creator:
+            raise UnknownConnectorType(
+                f"connector type {connection_type} is unknown.")
 
-        if not connector_cls:
-            raise ValueError(
-                f"No connector registered for type: {connector_type}")
-
-        return connector_cls(
-            name=name,
-            kafka_consumer_datasource_name=kafka_consumer_datasource_name,
-            data_sink_name=data_sink_name
-        )
+        return creator.from_dict(config)
