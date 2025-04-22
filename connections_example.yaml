@@ -29,9 +29,9 @@ connectors:
   - name: orders_to_postgresql
     type: kafka_to_postgresql
     kafka_consumer: kafka_orders_stream
-    data_sink: postgresql_orders
+    sink: postgresql_orders
 
   - name: orders_to_s3
     type: kafka_to_s3
     kafka_consumer: kafka_orders_stream
-    data_sink: s3_order_archive
+    sink: s3_order_archive

@@ -83,12 +83,14 @@ pg_datasource.insert(
 )
 ```
 
-## Supported Connection / DataSource Types
+## Supported Connections / DataSources
 
 - `s3`: Amazon S3 using boto3
 - `kafka_producer`: Kafka producer using confluent-kafka
 - `kafka_consumer`: Kafka consumer using confluent-kafka
 - `postgresql`: PostgreSQL using SQLAlchemy. For detailed description see [OLTP.README.md](OLTP.README.md)
+
+## Supported Connectors
 
 
 
