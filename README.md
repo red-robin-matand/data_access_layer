@@ -45,6 +45,7 @@ connections:
     type: kafka_producer
     broker: YOUR_BROKER
     topic: YOUR_TOPIC
+    partitions: 6
     config:
       acks: all
       retries: 3

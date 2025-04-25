@@ -13,6 +13,10 @@ class KafkaProducerDataSource(KafkaDataSource):
     def __init__(self, connection: KafkaProducerConnection):
         super().__init__(connection)
 
+        self._connection : KafkaProducerConnection
+
+        self._partitions = self._connection._partitions
+
     def delivery_report(self, err, msg) -> None:
         if err is not None:
             message = f"Message delivery failed: {err}"
@@ -33,10 +37,11 @@ class KafkaProducerDataSource(KafkaDataSource):
 
     def batch_produce(self, messages: list, back_pressure_threshold: int = None) -> None:
         for message in messages:
-            self.produce(
-                key=message['key'],
-                value=message['value'],
-                partition=message.get('partition', None)
+            self._connection_engine.produce(
+                topic=self._topic,
+                key=message["key"],
+                value=message["value"],
+                partition=message["partition"],
             )
 
             if back_pressure_threshold and self.buffer_length() > back_pressure_threshold:

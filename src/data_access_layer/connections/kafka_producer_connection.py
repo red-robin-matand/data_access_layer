@@ -14,6 +14,7 @@ class KafkaProducerConnection(KafkaConnection):
         CONFIG_RETRIES = 'retries'
         CONFIG_RETRY_BACKOFF = 'retry.backoff.ms'
         CONFIG_COMPRESSION = 'compression.type'
+        PARTITIONS = 'partitions'
 
         @classmethod
         def required_keys(cls):
@@ -25,12 +26,14 @@ class KafkaProducerConnection(KafkaConnection):
                 cls.CONFIG_COMPRESSION.value
             ]]
 
-    def __init__(self, name: str, broker: str, topic: str, acks: str = 'all', retries: int = 3, retry_backoff_ms: int = 1000, compression_type: str = 'snappy') -> None:
+    def __init__(self, name: str, broker: str, topic: str, partitions: int, acks: str = 'all', retries: int = 3, retry_backoff_ms: int = 1000, compression_type: str = 'snappy') -> None:
         super().__init__(
             name=name,
             broker=broker,
             topic=topic,
         )
+        self._partitions = partitions
+
         self._connection_engine: confluent_kafka.Producer = None
         self._config = {
             'acks': acks,
@@ -50,6 +53,7 @@ class KafkaProducerConnection(KafkaConnection):
             name=config[cls.KafkaConfigKeys.NAME.value],
             broker=config[cls.KafkaConfigKeys.BROKER.value],
             topic=config[cls.KafkaConfigKeys.TOPIC.value],
+            partitions=config[cls.KafkaConfigKeys.PARTITIONS.value],
             acks=producer_config.get(
                 cls.KafkaConfigKeys.CONFIG_ACKS.value, 'all'),
             retries=producer_config.get(
