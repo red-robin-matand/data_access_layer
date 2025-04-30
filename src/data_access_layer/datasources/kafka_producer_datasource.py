@@ -16,6 +16,7 @@ class KafkaProducerDataSource(KafkaDataSource):
         self._connection : KafkaProducerConnection
 
         self._partitions = self._connection._partitions
+        self._topic = self._connection._topic
 
     def delivery_report(self, err, msg) -> None:
         if err is not None:
@@ -37,12 +38,16 @@ class KafkaProducerDataSource(KafkaDataSource):
 
     def batch_produce(self, messages: list, back_pressure_threshold: int = None) -> None:
         for message in messages:
-            self._connection_engine.produce(
-                topic=self._topic,
-                key=message["key"],
-                value=message["value"],
-                partition=message["partition"],
-            )
+            try:
+                self._connection_engine.produce(
+                    topic=self._topic,
+                    key=message["key"],
+                    value=message["value"],
+                    partition=message["partition"],
+                )
+            except Exception as e:
+                error_message = f'During production of {message}, got {e}'
+                raise MessageDeliveryError(error_message)
 
             if back_pressure_threshold and self.buffer_length() > back_pressure_threshold:
                 self.flush()
@@ -53,7 +58,7 @@ class KafkaProducerDataSource(KafkaDataSource):
         self._connection_engine.poll(timeout=timeout)
 
     def flush(self) -> None:
-        self._connection_engine.flush(timeout=self.DEFAULT_TIMEOUT_MS)
+        self._connection_engine.flush(timeout=self._default_timeout_ms)
 
     def buffer_length(self) -> int:
         return len(self._connection_engine)
