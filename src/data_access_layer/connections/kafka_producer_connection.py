@@ -12,12 +12,12 @@ class KafkaProducerConnection(KafkaConnection):
         CONFIG = 'config'
         CONFIG_ACKS = 'acks'
         CONFIG_RETRIES = 'retries'
-        CONFIG_RETRY_BACKOFF = 'retry.backoff.ms'
-        CONFIG_COMPRESSION = 'compression.type'
+        CONFIG_RETRY_BACKOFF = 'retry_backoff_ms'
+        CONFIG_COMPRESSION = 'compression_type'
         PARTITIONS = 'partitions'
         SASL = 'sasl'
-        SASL_USERNAME = 'sasl.username'
-        SASL_PASSWORD = 'sasl.password'
+        SASL_USERNAME = 'sasl_username'
+        SASL_PASSWORD = 'sasl_password'
 
         @classmethod
         def required_keys(cls):
@@ -58,6 +58,7 @@ class KafkaProducerConnection(KafkaConnection):
         cls.validate_dict_keys(config, config_keys)
 
         producer_config = config.get(cls.KafkaConfigKeys.CONFIG.value, {})
+        sasl_config = config.get(cls.KafkaConfigKeys.SASL.value, {})
 
         return cls(
             name=config[cls.KafkaConfigKeys.NAME.value],
@@ -72,9 +73,9 @@ class KafkaProducerConnection(KafkaConnection):
                 cls.KafkaConfigKeys.CONFIG_RETRY_BACKOFF.value, 1000),
             compression_type=producer_config.get(
                 cls.KafkaConfigKeys.CONFIG_COMPRESSION.value, 'snappy'),
-            sasl_username=config.get(
+            sasl_username=sasl_config.get(
                 cls.KafkaConfigKeys.SASL_USERNAME.value, None),
-            sasl_password=config.get(
+            sasl_password=sasl_config.get(
                 cls.KafkaConfigKeys.SASL_PASSWORD.value, None),
         )
 
@@ -104,6 +105,7 @@ class KafkaProducerConnection(KafkaConnection):
                 'sasl.password': self._sasl_password,
                 'sasl.mechanisms': 'PLAIN',
                 'security.protocol': 'SASL_SSL',
+                'client.id': 'cycler-simulator-producer'
             }
             config.update(sasl_args)
         self._connection_engine = confluent_kafka.Producer(config)
