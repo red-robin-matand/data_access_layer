@@ -15,6 +15,9 @@ class KafkaProducerConnection(KafkaConnection):
         CONFIG_RETRY_BACKOFF = 'retry.backoff.ms'
         CONFIG_COMPRESSION = 'compression.type'
         PARTITIONS = 'partitions'
+        SASL = 'sasl'
+        SASL_USERNAME = 'sasl.username'
+        SASL_PASSWORD = 'sasl.password'
 
         @classmethod
         def required_keys(cls):
@@ -23,10 +26,14 @@ class KafkaProducerConnection(KafkaConnection):
                 cls.CONFIG_ACKS.value,
                 cls.CONFIG_RETRIES.value,
                 cls.CONFIG_RETRY_BACKOFF.value,
-                cls.CONFIG_COMPRESSION.value
+                cls.CONFIG_COMPRESSION.value,
+                cls.SASL.value,
+                cls.SASL_USERNAME.value,
+                cls.SASL_PASSWORD.value,
             ]]
 
-    def __init__(self, name: str, broker: str, topic: str, partitions: int, acks: str = 'all', retries: int = 3, retry_backoff_ms: int = 1000, compression_type: str = 'snappy') -> None:
+    def __init__(self, name: str, broker: str, topic: str, partitions: int, acks: str = 'all', retries: int = 3, retry_backoff_ms: int = 1000, compression_type: str = 'snappy',
+                 sasl_username: str = None, sasl_password: str = None) -> None:
         super().__init__(
             name=name,
             broker=broker,
@@ -41,6 +48,9 @@ class KafkaProducerConnection(KafkaConnection):
             'retry.backoff.ms': retry_backoff_ms,
             'compression.type': compression_type,
         }
+        self._sasl = all([sasl_username, sasl_password])
+        self._sasl_username = sasl_username
+        self._sasl_password = sasl_password
 
     @classmethod
     def from_dict(cls, config: dict):
@@ -61,7 +71,11 @@ class KafkaProducerConnection(KafkaConnection):
             retry_backoff_ms=producer_config.get(
                 cls.KafkaConfigKeys.CONFIG_RETRY_BACKOFF.value, 1000),
             compression_type=producer_config.get(
-                cls.KafkaConfigKeys.CONFIG_COMPRESSION.value, 'snappy')
+                cls.KafkaConfigKeys.CONFIG_COMPRESSION.value, 'snappy'),
+            sasl_username=config.get(
+                cls.KafkaConfigKeys.SASL_USERNAME.value, None),
+            sasl_password=config.get(
+                cls.KafkaConfigKeys.SASL_PASSWORD.value, None),
         )
 
     def connect(self):
@@ -83,4 +97,13 @@ class KafkaProducerConnection(KafkaConnection):
             'bootstrap.servers': self._broker,
             **self._config,
         }
+        sasl_args = {}
+        if self._sasl:
+            sasl_args = {
+                'sasl.username': self._sasl_username,
+                'sasl.password': self._sasl_password,
+                'sasl.mechanisms': 'PLAIN',
+                'security.protocol': 'SASL_SSL',
+            }
+            config.update(sasl_args)
         self._connection_engine = confluent_kafka.Producer(config)

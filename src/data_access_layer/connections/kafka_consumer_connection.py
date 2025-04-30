@@ -1,9 +1,30 @@
 import confluent_kafka
 from data_access_layer.connections import KafkaConnection
+from data_access_layer.connections.exceptions import ConnectionFailed
 
 
 class KafkaConsumerConnection(KafkaConnection):
-    def __init__(self, name: str, broker: str, topic: str, group_id: str, offset: str) -> None:
+
+    class KafkaConfigKeys(KafkaConnection.ConfigKeys):
+        NAME = 'name'
+        BROKER = 'broker'
+        TOPIC = 'topic'
+        GROUP_ID = 'group_id'
+        OFFSET = 'offset'
+        SASL = 'sasl'
+        SASL_USERNAME = 'sasl.username'
+        SASL_PASSWORD = 'sasl.password'
+
+        @classmethod
+        def required_keys(cls):
+            return [member.value for member in cls if member.value not in [
+                cls.SASL.value,
+                cls.SASL_USERNAME.value,
+                cls.SASL_PASSWORD.value,
+            ]]
+        
+    def __init__(self, name: str, broker: str, topic: str, group_id: str, offset: str,
+                 sasl_username : str = None, sasl_password : str = None) -> None:
         super().__init__(
             name=name,
             broker=broker,
@@ -12,17 +33,9 @@ class KafkaConsumerConnection(KafkaConnection):
         self._group_id = group_id
         self._offset = offset
         self._connection_engine: confluent_kafka.Consumer = None
-
-    class KafkaConfigKeys(KafkaConnection.ConfigKeys):
-        NAME = 'name'
-        BROKER = 'broker'
-        TOPIC = 'topic'
-        GROUP_ID = 'group_id'
-        OFFSET = 'offset'
-
-        @classmethod
-        def required_keys(cls):
-            return [member.value for member in cls]
+        self._sasl = all([sasl_username, sasl_password])
+        self._sasl_username = sasl_username
+        self._sasl_password = sasl_password
 
     @classmethod
     def from_dict(cls, config: dict):
@@ -35,6 +48,10 @@ class KafkaConsumerConnection(KafkaConnection):
             topic=config[cls.KafkaConfigKeys.TOPIC.value],
             group_id=config[cls.KafkaConfigKeys.GROUP_ID.value],
             offset=config[cls.KafkaConfigKeys.OFFSET.value],
+            sasl_username=config.get(
+                cls.KafkaConfigKeys.SASL_USERNAME.value, None),
+            sasl_password=config.get(
+                cls.KafkaConfigKeys.SASL_PASSWORD.value, None),
         )
 
     def connect(self):
@@ -52,12 +69,22 @@ class KafkaConsumerConnection(KafkaConnection):
             'group.id': self._group_id,
             'auto.offset.reset': self._offset,
         }
+        sasl_args = {}
+        if self._sasl:
+            sasl_args = {
+                'sasl.username': self._sasl_username,
+                'sasl.password': self._sasl_password,
+                'sasl.mechanisms': 'PLAIN',
+                'security.protocol': 'SASL_SSL',
+            }
+            config.update(sasl_args)
         self._connection_engine = confluent_kafka.Consumer(config)
 
         try:
             self._connection_engine.subscribe([self._topic])
         except Exception as e:
-            raise
+            message = f"Failed to subscribe to topic {self._topic}: {e}"
+            raise ConnectionFailed(message) from e
 
     @property
     def group_id(self) -> str:

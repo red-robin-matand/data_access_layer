@@ -3,4 +3,5 @@ from .connection import (
     UnknownConnectionType,
     MissingConfigurationKey,
     DisconnectFailed,
+    ConnectionFailed,
 )
