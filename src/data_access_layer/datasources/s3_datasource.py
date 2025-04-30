@@ -9,7 +9,6 @@ from fastavro import schemaless_reader
 from io import BytesIO
 import pyarrow as pa
 import pyarrow.parquet as pq
-import s3fs
 
 class S3DataSource(ObjectStoreDataSource):
 
@@ -17,6 +16,7 @@ class S3DataSource(ObjectStoreDataSource):
         super().__init__(connection)
 
         self._bucket = connection._bucket
+        self._region = connection._region
 
         self._large_file_transfer_config: TransferConfig = None
         self._huge_file_transfer_config: TransferConfig = None
@@ -27,6 +27,8 @@ class S3DataSource(ObjectStoreDataSource):
 
         self._set_file_thresholds()
         self._set_transfer_configs()
+
+        self.fs = pa.fs.S3FileSystem(region=self._region)
 
     def _set_file_thresholds(self) -> None:
 
@@ -264,7 +266,7 @@ class S3DataSource(ObjectStoreDataSource):
             pq.write_to_dataset(
                 table, 
                 object_name, 
-                filesystem=s3fs.S3FileSystem(),
+                filesystem=self.fs,
                 partition_cols=partition_cols,
                 compression=compression,
                 row_group_size=row_group_size,
