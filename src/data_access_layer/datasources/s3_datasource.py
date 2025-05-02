@@ -5,10 +5,9 @@ from data_access_layer.datasources.exceptions import ObjectStoreDatasourceError
 from tqdm.auto import tqdm
 from boto3.s3.transfer import TransferConfig, S3Transfer
 import os
-from fastavro import schemaless_reader
-from io import BytesIO
 import pyarrow as pa
 import pyarrow.parquet as pq
+
 
 class S3DataSource(ObjectStoreDataSource):
 
@@ -250,27 +249,20 @@ class S3DataSource(ObjectStoreDataSource):
             message = f"Error getting size of object {object_name} from S3: {str(e)}"
             raise ObjectStoreDatasourceError(message)
 
-    def write_messages_to_parquet(self, messages : list, object_name: str, config) -> None:
+    def write_messages_to_parquet(self, records: list, root_path: str, partition_cols: list) -> None:
         try:
-            compression = config.get('compression', 'snappy')
-            row_group_size = config.get('row_group_size', 1000000)
-            partition_cols = config.get('partition_cols', None)
-            schema = config.get('schema', None)
-
-            records = []
-            for msg in messages:
-                record = schemaless_reader(BytesIO(msg.value()), schema)
-                records.append(record)
+            compression = 'snappy'
+            row_group_size = 1000000
 
             table = pa.Table.from_pylist(records)
             pq.write_to_dataset(
-                table, 
-                object_name, 
+                table=table,
+                root_path=root_path,
                 filesystem=self.fs,
                 partition_cols=partition_cols,
                 compression=compression,
                 row_group_size=row_group_size,
             )
         except Exception as e:
-            message = f"Error writing Parquet file {object_name} to S3: {str(e)}"
+            message = f"Error writing table {root_path} to S3: {str(e)}"
             raise ObjectStoreDatasourceError(message)
