@@ -35,5 +35,6 @@ class KafkaConsumerDataSource(KafkaDataSource):
         return self._connection_engine.positions(topic_partition, timeout=self.DEFAULT_TIMEOUT_MS)
     
     def poll(self, timeout: int = 0) -> dict:
-        message = self._connection_engine.poll(timeout=timeout)
-        return message
+        messages = self._connection_engine.poll(timeout=timeout)
+        return messages
+    
