@@ -1,4 +1,5 @@
 from .connector import Connector
+from .message_buffer import MessageBuffer
 from .sink_connector import SinkConnector
 from .source_connector import SourceConnector
 from .s3_sink_connector import S3SinkConnector
