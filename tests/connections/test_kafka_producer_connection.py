@@ -4,14 +4,12 @@ import confluent_kafka
 from data_access_layer.connections import KafkaProducerConnection
 from data_access_layer.connections.exceptions.connection import MissingConfigurationKey
 
-import re
-
 
 class TestKafkaProducerConnection:
     @pytest.fixture
     def connection_config(self):
         return {
-            "type": "kafka_producer",
+            "partitions": 10,
             "broker": "test_broker",
             "topic": "test_topic",
             "name": "test_kafka_producer",
@@ -33,11 +31,16 @@ class TestKafkaProducerConnection:
 
         mock_kafka_producer.assert_called_once_with({
             'bootstrap.servers': 'test_broker',
+            'acks': 'all',
+            'retries': 3,
+            'retry.backoff.ms': 1000,
+            'compression.type': 'snappy'
         })
 
     @patch('confluent_kafka.Producer')
     def test_connection_failure(self, mock_kafka_producer, connection_config):
-        mock_kafka_producer.side_effect = confluent_kafka.KafkaException("Failed to connect")
+        mock_kafka_producer.side_effect = confluent_kafka.KafkaException(
+            "Failed to connect")
 
         connection = KafkaProducerConnection.from_dict(connection_config)
         with pytest.raises(confluent_kafka.KafkaException):
@@ -60,7 +63,7 @@ class TestKafkaProducerConnection:
         mock_kafka_producer.return_value = mock_producer
 
         mock_producer.list_topics.return_value = Mock()
-        
+
         connection = KafkaProducerConnection.from_dict(connection_config)
         connection.connect()
 
@@ -79,7 +82,7 @@ class TestKafkaProducerConnection:
 
     def test_kafka_producer_connection_valid_config(self):
         valid_config = {
-            "type": "kafka_producer",
+            "partitions": 6,
             "broker": "test_broker",
             "topic": "test_topic",
             "name": "test_kafka_producer",
