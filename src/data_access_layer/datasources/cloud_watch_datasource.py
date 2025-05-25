@@ -10,12 +10,14 @@ class CloudWatchDataSource(ObjectStoreDataSource):
     def __init__(self, connection: CloudWatchConnection):
         super().__init__(connection)
 
-    def get_log_streams(self, log_group_name: str, prefix: str = None) -> dict:
+    def get_log_streams(self, log_group_name: str, prefix: str = None, n :int = 1) -> dict:
         try:
             response = self._connection_engine.describe_log_streams(
                 logGroupName=log_group_name,
                 logStreamNamePrefix=prefix,
                 startFromHead=False,
+                orderBy='LastEventTime',
+                limit=n,
                 )
             
             log_streams = response['logStreams']
@@ -54,3 +56,24 @@ class CloudWatchDataSource(ObjectStoreDataSource):
             return result
         except Exception as e:
             raise CloudWatchDatasourceError(f"Failed to get log events: {str(e)}")
+    
+    def get_lambda_logs(self, function_name: str, n : int) -> pd.DataFrame:
+        try:
+            log_group_name = f'/aws/lambda/{function_name}'
+            log_streams = self.get_log_streams(
+                log_group_name=log_group_name,
+                n=n,
+            )
+
+            frames = []
+            for stream_name in log_streams.keys():
+                events = self.get_log_events(
+                    log_group_name=log_group_name,
+                    log_stream_name=stream_name
+                )
+                events['log_stream_name'] = stream_name
+                frames.append(events)
+            result = pd.concat(frames, ignore_index=True)
+            return result
+        except Exception as e:
+            raise CloudWatchDatasourceError(f"Failed to get lambda logs: {str(e)}")
