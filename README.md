@@ -28,8 +28,6 @@ connections:
 
   - name: s3_name
     type: s3
-    access_key: YOUR_S3_ACCESS_KEY
-    secret_key: YOUR_S3_SECRET_KEY
     region: YOUR_S3_REGION
     connections: N_CONNECTIONS
     bucket: YOUR_BUCKET_NAME
