@@ -86,6 +86,7 @@ postgresql = manager.get_data_source("postgresql_connection")
 ### Data Sources
 - **S3 DataSource**: Upload, download, list and manage files in S3 buckets
 - **PostgreSQL DataSource**: Execute queries, manage transactions, and handle data. See [OLTP.README.md](OLTP.README.md) for details
+- **CloudWatch DataSource**: Retrieve logs from AWS CloudWatch
 - **Kafka Consumer DataSource**: Consume messages from Kafka topics
 - **Kafka Producer DataSource**: Produce messages to Kafka topics
 
