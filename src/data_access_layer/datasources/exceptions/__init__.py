@@ -3,4 +3,5 @@ from .datasource import (
     ObjectStoreDatasourceError,
     OLTPDatasourceError,
     MessageDeliveryError,
+    CloudWatchDatasourceError,
 )

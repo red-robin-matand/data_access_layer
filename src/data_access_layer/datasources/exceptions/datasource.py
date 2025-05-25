@@ -47,3 +47,9 @@ class KafkaConsumerDatasourceError(DatasourceException):
     def __init__(self, message):
         
         super().__init__(message)
+
+class CloudWatchDatasourceError(DatasourceException):
+
+    def __init__(self, message):
+        
+        super().__init__(message)
