@@ -1,11 +1,11 @@
-from data_access_layer.datasources import ObjectStoreDataSource
+from data_access_layer.datasources import DataSource
 from data_access_layer.connections import CloudWatchConnection
 from data_access_layer.datasources.exceptions import CloudWatchDatasourceError
 
 import pandas as pd
 
 
-class CloudWatchDataSource(ObjectStoreDataSource):
+class CloudWatchDataSource(DataSource):
 
     def __init__(self, connection: CloudWatchConnection):
         super().__init__(connection)
