@@ -48,9 +48,9 @@ class KafkaConsumerConnection(KafkaConnection):
             topic=config[cls.KafkaConfigKeys.TOPIC.value],
             group_id=config[cls.KafkaConfigKeys.GROUP_ID.value],
             offset=config[cls.KafkaConfigKeys.OFFSET.value],
-            sasl_username=config.get(
+            sasl_username=config.get(cls.KafkaConfigKeys.SASL.value,{}).get(
                 cls.KafkaConfigKeys.SASL_USERNAME.value, None),
-            sasl_password=config.get(
+            sasl_password=config.get(cls.KafkaConfigKeys.SASL.value,{}).get(
                 cls.KafkaConfigKeys.SASL_PASSWORD.value, None),
         )
 
