@@ -61,7 +61,7 @@ class S3SourceConnector(SourceConnector):
             writer(buffer, parsed_schema, [record])
             avro_bytes = buffer.getvalue()
 
-            key = ':'.join(record[key_columns].to_list())
+            key = ':'.join(row[key_columns].astype(str).to_list())
             partition = int(record[partition_column] % self._sink._partitions)
 
             messages.append({
