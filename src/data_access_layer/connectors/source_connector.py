@@ -1,10 +1,12 @@
-from abc import ABC, abstractmethod
 
 from data_access_layer.connectors import Connector
 
 
-class SourceConnector(Connector, ABC):
+class SourceConnector(Connector):
 
-    @abstractmethod
-    def source_to_sink(self, source_args: dict, sink_args: dict) -> None:
-        pass
+    def __init__(self, name: str, source_name: str, sink_name: str) -> None:
+        super().__init__(
+            name=name,
+            source_name=source_name,
+            sink_name=sink_name,
+        )
