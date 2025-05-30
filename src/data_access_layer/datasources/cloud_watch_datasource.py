@@ -10,12 +10,10 @@ class CloudWatchDataSource(DataSource):
     def __init__(self, connection: CloudWatchConnection):
         super().__init__(connection)
 
-    def get_log_streams(self, log_group_name: str, prefix: str = None, n :int = 1) -> dict:
+    def get_log_streams(self, log_group_name: str,  n :int = 1) -> dict:
         try:
             response = self._connection_engine.describe_log_streams(
                 logGroupName=log_group_name,
-                logStreamNamePrefix=prefix,
-                startFromHead=False,
                 orderBy='LastEventTime',
                 limit=n,
                 )
