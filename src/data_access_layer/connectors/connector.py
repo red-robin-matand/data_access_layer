@@ -75,6 +75,4 @@ class Connector(ABC):
     def __del__(self) -> None:
         self.disconnect()
 
-    @abstractmethod
-    def source_to_sink(self, source_args: dict, sink_args: dict) -> None:
-        pass
+    
