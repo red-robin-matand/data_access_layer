@@ -2,6 +2,7 @@ import pandas as pd
 from fastavro import writer, parse_schema
 from io import BytesIO
 from tqdm.auto import tqdm
+import os
 
 from data_access_layer.connectors import SourceConnector
 from data_access_layer.connectors.exceptions import ConnectorException
@@ -73,6 +74,10 @@ class S3SourceConnector(SourceConnector):
         return messages
 
     def produce_from_object(self, object_name : str, download_path : str, schema : dict, key_columns : list, partition_column : str) -> None:
+        
+        local_dir = os.path.dirname(download_path)
+        if not os.path.exists(local_dir):
+            os.makedirs(local_dir)
 
         self.download_file(
             object_name=object_name,
