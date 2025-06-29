@@ -55,14 +55,14 @@ class S3SourceConnector(SourceConnector):
         parsed_schema = parse_schema(schema)
 
         messages = []
-        for _, row in tqdm(df.iterrows(), desc='building messages', total=df.shape[0]):
-            record = row.to_dict()
+        for row in tqdm(df.itertuples(index=False), desc='building messages', total=df.shape[0]):
+            record = row._asdict()
 
             buffer = BytesIO()
             writer(buffer, parsed_schema, [record])
             avro_bytes = buffer.getvalue()
 
-            key = ':'.join(row[key_columns].astype(str).to_list())
+            key = ':'.join([str(record[col]) for col in key_columns])
             partition = int(record[partition_column] % self._sink._partitions)
 
             messages.append({
