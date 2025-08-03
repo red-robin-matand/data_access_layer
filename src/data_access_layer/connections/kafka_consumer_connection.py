@@ -12,8 +12,8 @@ class KafkaConsumerConnection(KafkaConnection):
         GROUP_ID = 'group_id'
         OFFSET = 'offset'
         SASL = 'sasl'
-        SASL_USERNAME = 'sasl.username'
-        SASL_PASSWORD = 'sasl.password'
+        SASL_USERNAME = 'sasl_username'
+        SASL_PASSWORD = 'sasl_password'
 
         @classmethod
         def required_keys(cls):
@@ -34,6 +34,7 @@ class KafkaConsumerConnection(KafkaConnection):
         self._offset = offset
         self._connection_engine: confluent_kafka.Consumer = None
         self._sasl = all([sasl_username, sasl_password])
+        print(self._sasl,[sasl_username, sasl_password])
         self._sasl_username = sasl_username
         self._sasl_password = sasl_password
 
@@ -42,15 +43,17 @@ class KafkaConsumerConnection(KafkaConnection):
         config_keys = cls.KafkaConfigKeys.required_keys()
         cls.validate_dict_keys(config, config_keys)
 
+        sasl_config = config.get(cls.KafkaConfigKeys.SASL.value, {})
+
         return cls(
             name=config[cls.KafkaConfigKeys.NAME.value],
             broker=config[cls.KafkaConfigKeys.BROKER.value],
             topic=config[cls.KafkaConfigKeys.TOPIC.value],
             group_id=config[cls.KafkaConfigKeys.GROUP_ID.value],
             offset=config[cls.KafkaConfigKeys.OFFSET.value],
-            sasl_username=config.get(cls.KafkaConfigKeys.SASL.value,{}).get(
+            sasl_username=sasl_config.get(
                 cls.KafkaConfigKeys.SASL_USERNAME.value, None),
-            sasl_password=config.get(cls.KafkaConfigKeys.SASL.value,{}).get(
+            sasl_password=sasl_config.get(
                 cls.KafkaConfigKeys.SASL_PASSWORD.value, None),
         )
 
