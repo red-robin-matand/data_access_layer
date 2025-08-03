@@ -2,7 +2,7 @@
 from data_access_layer.datasources import KafkaDataSource
 from data_access_layer.connections import KafkaConsumerConnection
 
-from confluent_kafka import TopicPartition
+from confluent_kafka import TopicPartition, Message
 
 class KafkaConsumerDataSource(KafkaDataSource):
 
@@ -34,7 +34,7 @@ class KafkaConsumerDataSource(KafkaDataSource):
         topic_partition = TopicPartition(self._topic, 0,)
         return self._connection_engine.positions(topic_partition, timeout=self.DEFAULT_TIMEOUT_MS)
     
-    def poll(self, timeout: int = 0) -> dict:
-        messages = self._connection_engine.poll(timeout=timeout)
-        return messages
+    def poll(self, timeout: int = 0) -> Message:
+        message = self._connection_engine.poll(timeout=timeout)
+        return message
     
