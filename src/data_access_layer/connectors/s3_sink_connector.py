@@ -31,6 +31,7 @@ class S3SinkConnector(SinkConnector):
         self.buffer_args = buffer_args
         self.partition_columns = partition_columns
         self.dataset_root = dataset_root
+        self.n_messages = 1000
 
         self.get_buffer()
 
@@ -55,7 +56,10 @@ class S3SinkConnector(SinkConnector):
     def run(self):
 
         while True:
-            batch = self._source.poll(timeout_ms=500)
+            batch = self._source.consume(
+                n_messages=self.n_messages,
+                timeout_ms=500,
+            )
             for tp, messages in batch.items():
                 for message in messages:
                     self.handle_message(message=message)
