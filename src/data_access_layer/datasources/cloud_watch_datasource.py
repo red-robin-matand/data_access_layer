@@ -10,14 +10,14 @@ class CloudWatchDataSource(DataSource):
     def __init__(self, connection: CloudWatchConnection):
         super().__init__(connection)
 
-    def get_log_streams(self, log_group_name: str,  n :int = 1) -> dict:
+    def get_log_streams(self, log_group_name: str,  n: int = 1) -> dict:
         try:
             response = self._connection_engine.describe_log_streams(
                 logGroupName=log_group_name,
                 orderBy='LastEventTime',
                 limit=n,
-                )
-            
+            )
+
             log_streams = response['logStreams']
             result = {}
 
@@ -28,8 +28,9 @@ class CloudWatchDataSource(DataSource):
 
             return result
         except Exception as e:
-            raise CloudWatchDatasourceError(f"Failed to get log streams: {str(e)}")
-        
+            raise CloudWatchDatasourceError(
+                f"Failed to get log streams: {str(e)}")
+
     def get_log_events(self, log_group_name: str, log_stream_name: str) -> pd.DataFrame:
         try:
             response = self._connection_engine.get_log_events(
@@ -37,7 +38,7 @@ class CloudWatchDataSource(DataSource):
                 logStreamName=log_stream_name,
                 startFromHead=False
             )
-            
+
             events = response['events']
             data = []
 
@@ -47,15 +48,18 @@ class CloudWatchDataSource(DataSource):
                 data.append({'message': message, 'timestamp': timestamp})
 
             result = pd.DataFrame(data)
-            result['timestamp'] = pd.to_datetime(result['timestamp'], unit='ms')
+            result['timestamp'] = pd.to_datetime(
+                result['timestamp'], unit='ms')
 
-            result = result.sort_values(by='timestamp', ascending=True).reset_index(drop=True)
+            result = result.sort_values(
+                by='timestamp', ascending=True).reset_index(drop=True)
 
             return result
         except Exception as e:
-            raise CloudWatchDatasourceError(f"Failed to get log events: {str(e)}")
-    
-    def get_lambda_logs(self, function_name: str, n : int) -> pd.DataFrame:
+            raise CloudWatchDatasourceError(
+                f"Failed to get log events: {str(e)}")
+
+    def get_lambda_logs(self, function_name: str, n: int) -> pd.DataFrame:
         try:
             log_group_name = f'/aws/lambda/{function_name}'
             log_streams = self.get_log_streams(
@@ -74,4 +78,19 @@ class CloudWatchDataSource(DataSource):
             result = pd.concat(frames, ignore_index=True)
             return result
         except Exception as e:
-            raise CloudWatchDatasourceError(f"Failed to get lambda logs: {str(e)}")
+            raise CloudWatchDatasourceError(
+                f"Failed to get lambda logs: {str(e)}")
+
+    def put_metric_data(self, namespace : str, metric_data : list[dict]) -> None:
+
+        try:
+            self._connection_engine.put_metric_data(
+                Namespace=namespace,
+                MetricData=metric_data,
+            )
+
+        except Exception as e:
+            raise CloudWatchDatasourceError(
+                f"Failed to put metric data: {str(e)}")
+
+            
