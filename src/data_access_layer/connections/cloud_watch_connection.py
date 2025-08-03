@@ -32,7 +32,7 @@ class CloudWatchConnection(Connection):
     def _create_engine(self) -> None:
 
         self._connection_engine = boto3.client(
-            'logs',
+            'cloudwatch',
             region_name=self._region,
         )
 

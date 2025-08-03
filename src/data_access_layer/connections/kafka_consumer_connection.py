@@ -1,4 +1,5 @@
-import confluent_kafka
+from confluent_kafka import Consumer
+from confluent_kafka import TopicPartition
 from data_access_layer.connections import KafkaConnection
 from data_access_layer.connections.exceptions import ConnectionFailed
 
@@ -22,9 +23,9 @@ class KafkaConsumerConnection(KafkaConnection):
                 cls.SASL_USERNAME.value,
                 cls.SASL_PASSWORD.value,
             ]]
-        
+
     def __init__(self, name: str, broker: str, topic: str, group_id: str, offset: str,
-                 sasl_username : str = None, sasl_password : str = None) -> None:
+                 sasl_username: str = None, sasl_password: str = None) -> None:
         super().__init__(
             name=name,
             broker=broker,
@@ -32,9 +33,8 @@ class KafkaConsumerConnection(KafkaConnection):
         )
         self._group_id = group_id
         self._offset = offset
-        self._connection_engine: confluent_kafka.Consumer = None
+        self._connection_engine: Consumer = None
         self._sasl = all([sasl_username, sasl_password])
-        print(self._sasl,[sasl_username, sasl_password])
         self._sasl_username = sasl_username
         self._sasl_password = sasl_password
 
@@ -69,8 +69,8 @@ class KafkaConsumerConnection(KafkaConnection):
     def _create_engine(self) -> None:
         config = {
             'bootstrap.servers': self._broker,
-            'group.id': self._group_id,
-            'auto.offset.reset': self._offset,
+            'group.id': 'unique-test-group-8',
+            'auto.offset.reset': 'earliest',
         }
         sasl_args = {}
         if self._sasl:
@@ -81,13 +81,23 @@ class KafkaConsumerConnection(KafkaConnection):
                 'security.protocol': 'SASL_SSL',
             }
             config.update(sasl_args)
-        self._connection_engine = confluent_kafka.Consumer(config)
+        self._connection_engine = Consumer(config)
 
         try:
-            self._connection_engine.subscribe([self._topic])
+            metadata = self._connection_engine.list_topics(self._topic)
+            partitions = list(metadata.topics[self._topic].partitions.keys())
+
+            if not partitions:
+                raise ConnectionFailed(f"No partitions found for topic {self._topic}")
+
+            topic_partitions = [TopicPartition(self._topic, p) for p in partitions]
+            self._connection_engine.assign(topic_partitions)
+
+            # if self._offset == 'earliest':
+            #     self._connection_engine.seek_to_beginning(topic_partitions)
+
         except Exception as e:
-            message = f"Failed to subscribe to topic {self._topic}: {e}"
-            raise ConnectionFailed(message) from e
+            raise ConnectionFailed(f"Failed to assign partitions for topic {self._topic}: {e}") from e
 
     @property
     def group_id(self) -> str:

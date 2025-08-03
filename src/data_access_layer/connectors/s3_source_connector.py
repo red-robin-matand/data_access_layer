@@ -12,6 +12,9 @@ from data_access_layer.datasources import (
     KafkaProducerDataSource,
 )
 
+from fastavro import reader
+import io
+
 class S3SourceConnector(SourceConnector):
 
     def __init__(self, name : str, s3_connection_name : str, kafka_producer_connection_name: str) -> None:
@@ -52,6 +55,9 @@ class S3SourceConnector(SourceConnector):
     def build_messages_list_from_df_path(self, path : str, schema : dict, key_columns : list, partition_column : str) -> list:
 
         df = self.read_df_from_path(path=path)
+        print(df['channel'].nunique())
+        print(df.groupby('channel')['test_id'].nunique().sort_values(ascending=False))
+        
         parsed_schema = parse_schema(schema)
 
         messages = []
@@ -61,6 +67,12 @@ class S3SourceConnector(SourceConnector):
             buffer = BytesIO()
             writer(buffer, parsed_schema, [record])
             avro_bytes = buffer.getvalue()
+            record_from_bytes_iter = reader(io.BytesIO(avro_bytes), schema)
+            record_from_bytes = next(record_from_bytes_iter)
+
+            print(record)
+            print(record_from_bytes)
+            raise ValueError
 
             key = ':'.join([str(record[col]) for col in key_columns])
             partition = int(record[partition_column] % self._sink._partitions)

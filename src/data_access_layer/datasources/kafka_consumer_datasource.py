@@ -8,6 +8,7 @@ class KafkaConsumerDataSource(KafkaDataSource):
 
     def __init__(self, connection: KafkaConsumerConnection):
         super().__init__(connection)
+        self._topic = self._connection._topic
 
     def consume(self, n_messages : int, timeout: int) -> list:
         messages = self._connection_engine.consume(n_messages, timeout=timeout)
@@ -27,12 +28,12 @@ class KafkaConsumerDataSource(KafkaDataSource):
     def seek(self, offset : int) -> None:
 
         topic_partition = TopicPartition(self._topic, 0, offset)
-        self._connection_engine.seek(topic_partition, timeout=self.DEFAULT_TIMEOUT_MS)
+        self._connection_engine.seek(topic_partition)
 
     def positions(self) -> dict:
 
-        topic_partition = TopicPartition(self._topic, 0,)
-        return self._connection_engine.positions(topic_partition, timeout=self.DEFAULT_TIMEOUT_MS)
+        topic_partitions = self._connection_engine.assignment()
+        return self._connection_engine.position(topic_partitions)
     
     def poll(self, timeout: int = 0) -> Message:
         message = self._connection_engine.poll(timeout=timeout)
