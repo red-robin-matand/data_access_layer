@@ -69,7 +69,7 @@ class KafkaConsumerConnection(KafkaConnection):
     def _create_engine(self) -> None:
         config = {
             'bootstrap.servers': self._broker,
-            'group.id': 'unique-test-group-8',
+            'group.id': self._group_id,
             'auto.offset.reset': 'earliest',
         }
         sasl_args = {}
