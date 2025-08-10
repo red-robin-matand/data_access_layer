@@ -19,7 +19,7 @@ CONNECTION_TYPES = {
     "kafka_producer": KafkaProducerConnection,
     "postgresql": PostgreSQLConnection,
     "cloudwatch": CloudWatchConnection,
-    "cloudwatch_logs": CloudWatchConnection,
+    "cloudwatch_logs": CloudWatchLogsConnection,
 }
 
 from .connections_factory import ConnectionsFactory
