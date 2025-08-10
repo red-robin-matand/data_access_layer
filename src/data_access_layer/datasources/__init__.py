@@ -10,6 +10,7 @@ from .postgresql_datasource import PostgreSQLDataSource
 from .cloud_watch_datasource import CloudWatchDataSource
 from .kafka_consumer_datasource import KafkaConsumerDataSource
 from .kafka_producer_datasource import KafkaProducerDataSource
+from .cloud_watch_logs_datasource import CloudWatchLogsDataSource
 
 from data_access_layer.connections import (
     S3Connection,
@@ -17,6 +18,7 @@ from data_access_layer.connections import (
     KafkaConsumerConnection,
     KafkaProducerConnection,
     CloudWatchConnection,
+    CloudWatchLogsConnection,
 )
 
 DATA_SOURCE_TYPES = {
@@ -25,6 +27,7 @@ DATA_SOURCE_TYPES = {
     KafkaConsumerConnection: KafkaConsumerDataSource,
     KafkaProducerConnection: KafkaProducerDataSource,
     CloudWatchConnection: CloudWatchDataSource,
+    CloudWatchLogsConnection: CloudWatchLogsDataSource,
 }
 
 from .datasource_manager import DataSourceManager
