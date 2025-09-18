@@ -16,11 +16,11 @@ class ConnectionManager:
         if not cls._instance:
             cls._instance = super(ConnectionManager, cls).__new__(cls)
 
-            yaml_path = os.environ.get("CONNECTIONS_YAML")
+            yaml_path = os.environ.get("DATA_CONNECTIONS_YAML")
 
             if not yaml_path:
                 raise Exception(
-                    "CONNECTIONS_YAML environment variable is not set")
+                    "DATA_CONNECTIONS_YAML environment variable is not set")
 
             factory = ConnectionsFactory()
             for conn_name, conn_type in CONNECTION_TYPES.items():
