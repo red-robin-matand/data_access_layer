@@ -249,15 +249,16 @@ class S3DataSource(ObjectStoreDataSource):
             message = f"Error getting size of object {object_name} from S3: {str(e)}"
             raise ObjectStoreDatasourceError(message)
 
-    def write_messages_to_parquet(self, records: list, root_path: str, partition_cols: list) -> None:
+    def write_messages_to_parquet(self, records: list, prefix: str, partition_cols: list) -> None:
         try:
             compression = 'snappy'
             row_group_size = 1000000
+            root_path = f'{self._bucket}/{prefix}'
 
             table = pa.Table.from_pylist(records)
             pq.write_to_dataset(
-                table=table,
-                root_path=root_path,
+                table,
+                root_path,
                 filesystem=self.fs,
                 partition_cols=partition_cols,
                 compression=compression,
