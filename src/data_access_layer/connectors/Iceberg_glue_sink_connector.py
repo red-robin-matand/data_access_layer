@@ -7,30 +7,31 @@ from data_access_layer.connectors import (
 )
 
 from data_access_layer.datasources import (
-    S3DataSource,
+    IcebergGlueDataSource,
     KafkaConsumerDataSource,
 )
 
 
-class S3SinkConnector(SinkConnector):
+class IcebergGlueSinkConnector(SinkConnector):
 
-    def __init__(self, name: str, kafka_consumer_connection_name: str, s3_connection_name: str, schema: dict, buffer_args: dict,
-                 partition_columns: list, dataset_root: str) -> None:
+    def __init__(self, name: str, kafka_consumer_connection_name: str,iceberg_glue_connection_name: str, schema: dict, buffer_args: dict,
+                 partition_columns: list, namespace: str, table: str) -> None:
 
         super().__init__(
             name=name,
             source_name=kafka_consumer_connection_name,
-            sink_name=s3_connection_name,
+            sink_name=iceberg_glue_connection_name,
         )
 
         self._source: KafkaConsumerDataSource = None
-        self._sink: S3DataSource = None
+        self._sink: IcebergGlueDataSource = None
         self._buffer: MessageBuffer = None
 
         self.schema = schema
         self.buffer_args = buffer_args
         self.partition_columns = partition_columns
-        self.dataset_root = dataset_root
+        self.namespace = namespace
+        self.table = table
         self.n_messages = 1000
         self._stop_event = threading.Event()
 
@@ -49,10 +50,11 @@ class S3SinkConnector(SinkConnector):
         self._buffer.add(record)
 
         if self._buffer.should_flush():
-            batch_to_write = self._buffer.flush()
-            self._sink.write_messages_to_parquet(
-                records=batch_to_write,
-                prefix=self.dataset_root,
+            data = self._buffer.flush_as_arrow_table()
+            self._sink.append_to_table(
+                namespace=self.namespace,
+                table_name=self.table,
+                data=data,
                 partition_cols=self.partition_columns,
             )
 
