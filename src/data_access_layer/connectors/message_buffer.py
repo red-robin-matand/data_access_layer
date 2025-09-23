@@ -23,7 +23,7 @@ class MessageBuffer:
 
         return False
 
-    def flush(self) -> None:
+    def flush(self) -> list:
         data = self._buffer
         self._buffer = []
         self._last_flush = time.time()
