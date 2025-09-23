@@ -63,7 +63,7 @@ class S3DataSource(ObjectStoreDataSource):
 
     def _set_read_dataset_config(self) -> None:
 
-        self._max_records_for_pandas = 1000000
+        self._max_records_for_pandas = 100_000
         self._allowable_operators = ['=', '!=', '<', '<=', '>', '>=', 'in', 'not in']
 
     def get_object(self, object_name: str) -> str:
@@ -292,8 +292,9 @@ class S3DataSource(ObjectStoreDataSource):
             if operator in ['in', 'not in'] and not isinstance(value, list):
                 raise ValueError(f"Value for operator '{operator}', which is set for field {field} must be a list. Got {type(value)}")
         
-    def read_dataset(self, root_path: str, filters: list = None, return_pandas: bool = False) -> Union[pa.Table,pd.DataFrame]:
+    def read_dataset(self, prefix: str, filters: list = None, return_pandas: bool = False) -> Union[pa.Table,pd.DataFrame]:
         try:
+            root_path = f'{self._bucket}/{prefix}'
             if not filters is None:
                 self.validate_filters(filters)
             dataset = pq.ParquetDataset(
