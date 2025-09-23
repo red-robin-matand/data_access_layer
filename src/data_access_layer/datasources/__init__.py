@@ -2,8 +2,11 @@ from .datasource import DataSource
 from .object_store_datasource import ObjectStoreDataSource
 from .oltp_datasource import OLTPDataSource
 from .stream_datasource import StreamDataSource
+from .datalake_datasource import DataLakeDataSource
 
 from .kafka_datasource import KafkaDataSource
+
+from .iceberg_glue_datasource import IcebergGlueDataSource
 
 from .s3_datasource import S3DataSource
 from .postgresql_datasource import PostgreSQLDataSource
@@ -19,6 +22,7 @@ from data_access_layer.connections import (
     KafkaProducerConnection,
     CloudWatchConnection,
     CloudWatchLogsConnection,
+    IcebergGlueConnection,
 )
 
 DATA_SOURCE_TYPES = {
@@ -28,6 +32,7 @@ DATA_SOURCE_TYPES = {
     KafkaProducerConnection: KafkaProducerDataSource,
     CloudWatchConnection: CloudWatchDataSource,
     CloudWatchLogsConnection: CloudWatchLogsDataSource,
+    IcebergGlueConnection: IcebergGlueDataSource,
 }
 
 from .datasource_manager import DataSourceManager
