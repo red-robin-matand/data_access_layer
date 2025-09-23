@@ -5,7 +5,9 @@ from data_access_layer.datasources.exceptions import ObjectStoreDatasourceError
 from tqdm.auto import tqdm
 from boto3.s3.transfer import TransferConfig, S3Transfer
 import os
+from typing import Union
 import pyarrow as pa
+import pandas as pd
 import pyarrow.parquet as pq
 
 
@@ -290,7 +292,7 @@ class S3DataSource(ObjectStoreDataSource):
             if operator in ['in', 'not in'] and not isinstance(value, list):
                 raise ValueError(f"Value for operator '{operator}', which is set for field {field} must be a list. Got {type(value)}")
         
-    def read_dataset(self, root_path: str, filters: list = None, return_pandas: bool = False) -> pa.Table:
+    def read_dataset(self, root_path: str, filters: list = None, return_pandas: bool = False) -> Union[pa.Table,pd.DataFrame]:
         try:
             if not filters is None:
                 self.validate_filters(filters)
