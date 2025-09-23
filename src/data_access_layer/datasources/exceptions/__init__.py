@@ -4,4 +4,5 @@ from .datasource import (
     OLTPDatasourceError,
     MessageDeliveryError,
     CloudWatchDatasourceError,
+    DataLakeDatasourceError
 )

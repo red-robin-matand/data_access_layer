@@ -53,3 +53,9 @@ class CloudWatchDatasourceError(DatasourceException):
     def __init__(self, message):
         
         super().__init__(message)
+
+class DataLakeDatasourceError(DatasourceException):
+
+    def __init__(self, message):
+        
+        super().__init__(message)
