@@ -2,8 +2,11 @@ from .connection import Connection
 from .oltp_connection import OLTPConnection
 from .stream_connection import StreamConnection
 from .object_store_connection import ObjectStoreConnection
+from .data_lake_connection import DataLakeConnection
 
 from .kafka_connection import KafkaConnection
+
+from .iceberg_glue_connection import IcebergGlueConnection
 
 from .s3_connection import S3Connection
 from .postgresql_connection import PostgreSQLConnection
@@ -20,6 +23,7 @@ CONNECTION_TYPES = {
     "postgresql": PostgreSQLConnection,
     "cloudwatch": CloudWatchConnection,
     "cloudwatch_logs": CloudWatchLogsConnection,
+    "iceberg_glue": IcebergGlueConnection,
 }
 
 from .connections_factory import ConnectionsFactory
