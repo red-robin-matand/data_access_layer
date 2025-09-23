@@ -1,4 +1,4 @@
-from fastavro import schemaless_reader
+from fastavro import reader
 import io
 
 from data_access_layer.connectors import (
@@ -39,27 +39,28 @@ class S3SinkConnector(SinkConnector):
         self._buffer = MessageBuffer(**self.buffer_args)
 
     def decode_avro(self, value: bytes) -> dict:
-        return schemaless_reader(io.BytesIO(value), self.schema)
+        record_iter = reader(io.BytesIO(value), self.schema)
+        record = next(record_iter)
+        return record
 
     def handle_message(self, message: bytes) -> None:
-        record = self.decode_avro(message.value)
+        record = self.decode_avro(message.value())
         self._buffer.add(record)
 
         if self._buffer.should_flush():
             batch_to_write = self._buffer.flush()
             self._sink.write_messages_to_parquet(
                 records=batch_to_write,
-                root_path=self.dataset_root,
+                prefix=self.dataset_root,
                 partition_cols=self.partition_columns,
             )
 
-    def run(self):
+    def source_to_sink(self):
 
         while True:
             batch = self._source.consume(
                 n_messages=self.n_messages,
-                timeout_ms=500,
+                timeout=500,
             )
-            for tp, messages in batch.items():
-                for message in messages:
-                    self.handle_message(message=message)
+            for message in batch:
+                self.handle_message(message=message)
