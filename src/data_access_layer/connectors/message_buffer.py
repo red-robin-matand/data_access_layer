@@ -1,5 +1,5 @@
 import time
-
+import pyarrow as pa
 
 class MessageBuffer:
     def __init__(self, max_messages: int = 1000, max_seconds: int = 10) -> None:
@@ -28,6 +28,12 @@ class MessageBuffer:
         self._buffer = []
         self._last_flush = time.time()
         return data
+
+    def flush_as_arrow_table(self) -> pa.Table:
+        table = pa.Table.from_pylist(self._buffer)
+        self._buffer = []
+        self._last_flush = time.time()
+        return table
 
     def __len__(self):
         return len(self._buffer)
