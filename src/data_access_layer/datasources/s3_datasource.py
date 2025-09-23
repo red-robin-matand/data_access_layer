@@ -23,9 +23,12 @@ class S3DataSource(ObjectStoreDataSource):
         self._small_file_threshold: int = None
         self._large_file_threshold: int = None
         self._huge_file_threshold: int = None
+        self._max_records_for_pandas: int = None
+        self._allowable_operators: list = None
 
         self._set_file_thresholds()
         self._set_transfer_configs()
+        self._set_read_dataset_config()
 
         self.fs = pa.fs.S3FileSystem(region=self._region)
 
@@ -55,6 +58,11 @@ class S3DataSource(ObjectStoreDataSource):
             multipart_chunksize=multipart_chunksize,
             use_threads=use_threads,
         )
+
+    def _set_read_dataset_config(self) -> None:
+
+        self._max_records_for_pandas = 1000000
+        self._allowable_operators = ['=', '!=', '<', '<=', '>', '>=', 'in', 'not in']
 
     def get_object(self, object_name: str) -> str:
         try:
@@ -265,4 +273,38 @@ class S3DataSource(ObjectStoreDataSource):
             )
         except Exception as e:
             message = f"Error writing table {root_path} to S3: {str(e)}"
+            raise ObjectStoreDatasourceError(message)
+
+    def validate_filters(self, filters: list) -> None:
+        if not isinstance(filters, list):
+            raise ValueError("Filters must be a list of tuples.")
+        for item in filters:
+            if not (isinstance(item, tuple) and len(item) == 3):
+                raise ValueError("Each filter must be a tuple of (field, operator, value).")
+            field, operator, value = item
+            if not isinstance(field, str):
+                raise ValueError(f"Field {field} must be a string. Got {type(field)}")
+            if operator not in self._allowable_operators:
+                raise ValueError(f"Operator {operator} for field {field} is not supported. Allowed operators are {self._allowable_operators}.")
+            if operator in ['in', 'not in'] and not isinstance(value, list):
+                raise ValueError(f"Value for operator '{operator}', which is set for field {field} must be a list. Got {type(value)}")
+        
+    def read_dataset(self, root_path: str, filters: list = None, return_pandas: bool = False) -> pa.Table:
+        try:
+            if not filters is None:
+                self.validate_filters(filters)
+            dataset = pq.ParquetDataset(
+                root_path,
+                filesystem=self.fs,
+                filters=filters,
+            )
+            table = dataset.read()
+            if return_pandas:
+                n_records = table.num_rows
+                if n_records > self._max_records_for_pandas:
+                    raise ValueError(f"Dataset has {n_records} records which exceeds the maximum of {self._max_records_for_pandas} for conversion to pandas DataFrame.")
+                return table.to_pandas()
+            return table
+        except Exception as e:
+            message = f"Error reading dataset {root_path} from S3: {str(e)}"
             raise ObjectStoreDatasourceError(message)
