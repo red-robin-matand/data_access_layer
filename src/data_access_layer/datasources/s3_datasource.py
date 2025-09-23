@@ -262,7 +262,7 @@ class S3DataSource(ObjectStoreDataSource):
     def write_messages_to_parquet(self, records: list, prefix: str, partition_cols: list) -> None:
         try:
             compression = 'snappy'
-            row_group_size = 1000000
+            row_group_size = 100_000
             root_path = f'{self._bucket}/{prefix}'
 
             table = pa.Table.from_pylist(records)
@@ -310,4 +310,41 @@ class S3DataSource(ObjectStoreDataSource):
             return table
         except Exception as e:
             message = f"Error reading dataset {root_path} from S3: {str(e)}"
+            raise ObjectStoreDatasourceError(message)
+
+    def stream_messages_to_parquet(self, records: list, prefix: str, partition_cols: list) -> None:
+        try:
+            compression = 'snappy'
+            row_group_size = 100_000
+            chunk_size = 50_000
+            writer_map = {}
+            root_path = f'{self._bucket}/{prefix}'
+
+            for i in range(0, len(records), chunk_size):
+                chunk = records[i:i + chunk_size]
+                table = pa.Table.from_pylist(chunk)
+                if partition_cols:
+                    partition_values = {
+                        col: str(table.column(col)[0].as_py())
+                        for col in partition_cols
+                    }
+                    partition_suffix = "/".join(f"{k}={v}" for k, v in partition_values.items())
+                    file_path = f"{root_path}/{partition_suffix}/part-0.parquet"
+                else:
+                    file_path = f"{root_path}/part-0.parquet"
+
+                if file_path not in writer_map:
+                    writer_map[file_path] = pq.ParquetWriter(
+                        where=file_path,
+                        schema=table.schema,
+                        compression=compression,
+                        filesystem=self.fs
+                    )
+
+                writer_map[file_path].write_table(table, row_group_size=row_group_size)
+
+            for writer in writer_map.values():
+                writer.close()
+        except Exception as e:
+            message = f"Error writing table {root_path} to S3: {str(e)}"
             raise ObjectStoreDatasourceError(message)

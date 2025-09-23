@@ -1,6 +1,6 @@
-from fastavro import reader
 import io
-
+import threading
+from fastavro import reader
 from data_access_layer.connectors import (
     SinkConnector,
     MessageBuffer,
@@ -32,6 +32,7 @@ class S3SinkConnector(SinkConnector):
         self.partition_columns = partition_columns
         self.dataset_root = dataset_root
         self.n_messages = 1000
+        self._stop_event = threading.Event()
 
         self.get_buffer()
 
@@ -57,10 +58,16 @@ class S3SinkConnector(SinkConnector):
 
     def source_to_sink(self):
 
-        while True:
-            batch = self._source.consume(
-                n_messages=self.n_messages,
-                timeout=500,
-            )
-            for message in batch:
-                self.handle_message(message=message)
+        try:
+            while not self._stop_event.is_set():
+                batch = self._source.consume(
+                    n_messages=self.n_messages,
+                    timeout=500,  
+                )
+                for message in batch:
+                    self.handle_message(message=message)
+        except KeyboardInterrupt:
+            print("Received Ctrl+C, stopping gracefully...")
+            self._stop_event.set()
+        finally:
+            self.disconnect()
