@@ -8,7 +8,7 @@ from data_access_layer.datasources.exceptions import DataLakeDatasourceError
 
 
 
-class IcebergGlueDataSource(DataLakeDataSource):
+class IcebergDataSource(DataLakeDataSource):
 
     def __init__(self, connection: IcebergGlueConnection):
         super().__init__(connection)

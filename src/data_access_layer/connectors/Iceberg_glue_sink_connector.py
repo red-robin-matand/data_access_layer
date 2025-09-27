@@ -7,7 +7,7 @@ from data_access_layer.connectors import (
 )
 
 from data_access_layer.datasources import (
-    IcebergGlueDataSource,
+    IcebergDataSource,
     KafkaConsumerDataSource,
 )
 
@@ -24,7 +24,7 @@ class IcebergGlueSinkConnector(SinkConnector):
         )
 
         self._source: KafkaConsumerDataSource = None
-        self._sink: IcebergGlueDataSource = None
+        self._sink: IcebergDataSource = None
         self._buffer: MessageBuffer = None
 
         self.schema = schema

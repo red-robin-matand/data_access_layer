@@ -6,7 +6,7 @@ from .datalake_datasource import DataLakeDataSource
 
 from .kafka_datasource import KafkaDataSource
 
-from .iceberg_glue_datasource import IcebergGlueDataSource
+from .iceberg_datasource import IcebergDataSource
 
 from .s3_datasource import S3DataSource
 from .postgresql_datasource import PostgreSQLDataSource
@@ -32,7 +32,7 @@ DATA_SOURCE_TYPES = {
     KafkaProducerConnection: KafkaProducerDataSource,
     CloudWatchConnection: CloudWatchDataSource,
     CloudWatchLogsConnection: CloudWatchLogsDataSource,
-    IcebergGlueConnection: IcebergGlueDataSource,
+    IcebergGlueConnection: IcebergDataSource,
 }
 
 from .datasource_manager import DataSourceManager
