@@ -4,10 +4,12 @@ from .sink_connector import SinkConnector
 from .source_connector import SourceConnector
 from .s3_sink_connector import S3SinkConnector
 from .s3_source_connector import S3SourceConnector
+from .Iceberg_sink_connector import IcebergSinkConnector
 
 CONNECTOR_TYPES = {
     "s3_sink": S3SinkConnector,
     "s3_source" : S3SourceConnector,
+    "iceberg_sink": IcebergSinkConnector,
 }
 
 from .connectors_factory import ConnectorsFactory
