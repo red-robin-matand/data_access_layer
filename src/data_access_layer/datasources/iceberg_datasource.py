@@ -164,7 +164,6 @@ class IcebergDataSource(DataLakeDataSource):
             limit=limit,
         )
 
-
     def validate_data(self, data) ->None:
 
         if not any(isinstance(data, dtype) for dtype in self.allowed_data_types_for_append):
@@ -181,51 +180,23 @@ class IcebergDataSource(DataLakeDataSource):
             message = f"Error appending data to table '{namespace}.{table_name}' : {str(e)}"
             raise DataLakeDatasourceError(message)
 
-    def add_columns_to_schema(self, table, new_fields: list) -> None:
-        for field in new_fields:
-            try:
-                table.update_schema().add_field(field).commit()
-            except Exception as e:
-                message = f"Error adding field '{field['name']}' to schema: {str(e)}"
-                raise DataLakeDatasourceError(message)
-
-    def remove_columns_from_schema(self, table, fields_to_remove: list) -> None:
-        for field in fields_to_remove:
-            try:
-                table.update_schema().remove_field(field['name']).commit()
-            except Exception as e:
-                message = f"Error removing field '{field['name']}' from schema: {str(e)}"
-                raise DataLakeDatasourceError(message)
-
-    def evolve_table_schema(self, namespace: str, table_name: str, new_schema: dict) -> None:
+    def _delete_from_table(self, namespace: str, table_name: str, delete_filter: BooleanExpression) -> None:
         try:
             table = self._connection_engine.load_table(f"{namespace}.{table_name}")
-            current_schema = table.schema().to_dict()
-
-            new_fields = list(set(new_schema['fields']) - set(current_schema['fields']))
-            if new_fields:
-                self.add_columns_to_schema(table, new_fields)
-
-            fields_to_remove = list(set(current_schema['fields']) - set(new_schema['fields']))
-            if fields_to_remove:
-                self.remove_columns_from_schema(table, fields_to_remove)
-
+            table.delete(delete_filter=delete_filter)
         except Exception as e:
-            message = f"Error evolving schema for table '{namespace}.{table_name}' : {str(e)}"
-            raise DataLakeDatasourceError(message)
-    
-    def expire_snapshots(self, namespace: str, table_name: str, older_than_timestamp: int) -> None:
-        try:
-            table = self._connection_engine.load_table(f"{namespace}.{table_name}")
-            table.expire_snapshots(older_than_timestamp)
-        except Exception as e:
-            message = f"Error expiring snapshots for table '{namespace}.{table_name}' : {str(e)}"
+            message = f"Error deleting data from table '{namespace}.{table_name}' : {str(e)}"
             raise DataLakeDatasourceError(message)
         
-    def compact_table(self, namespace: str, table_name: str) -> None:
-        try:
-            table = self._connection_engine.load_table(f"{namespace}.{table_name}")
-            table.rewrite_manifests()
-        except Exception as e:
-            message = f"Error compacting table '{namespace}.{table_name}' : {str(e)}"
-            raise DataLakeDatasourceError(message)
+    def delete_from_table(self, namespace: str, table_name: str, structured_conditions : dict = None, delete_filter: BooleanExpression = None) -> None:
+        if (not structured_conditions is None) and (not delete_filter is None):
+            raise ValueError("Cannot use both structured_conditions and delete_filter at the same time.")
+        
+        if not structured_conditions is None:
+            delete_filter = self._handle_structured_conditions(structured_conditions)
+
+        self._delete_from_table(
+            namespace=namespace,
+            table_name=table_name,
+            delete_filter=delete_filter,
+        )
