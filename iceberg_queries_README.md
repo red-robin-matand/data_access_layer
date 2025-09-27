@@ -1,8 +1,47 @@
 # Iceberg queries in data_access_layer
 
-This guide describes how data_access_layer translates structured conditions dictionaries into PyIceberg BooleanExpressions. It lets a user define filters without importing the necessary PyIceberg objects. Currently supports only basic and / or rule interaction (1 level deep)
+This guide describes how data_access_layer translates structured conditions dictionaries into PyIceberg BooleanExpressions. It lets a user define filters without importing the necessary PyIceberg objects. 
 
-## StartsWith - the equivalent of SQL's "like 'substring%'":
+## General
+Supports only basic and / or rule interaction (1 level deep). 
+
+
+Supports the following PyIceberg operators: 
+- EqualTo
+- NotEqualTo
+- GreaterThan
+- LessThan
+- GreaterThanOrEqual
+- LessThanOrEqual
+- StartsWith
+- NotStartsWith
+- IsNull
+- NotNull
+- In
+- NotIn
+
+### Naming conversion dictionary:
+
+```python
+string_to_pyiceberg_operator = {
+    'eq': EqualTo,
+    'gt': GreaterThan,
+    'lt': LessThan,
+    'gte': GreaterThanOrEqual,
+    'lte': LessThanOrEqual,
+    'starts_with': StartsWith,
+    'not_starts_with': NotStartsWith,
+    'is_null': IsNull,
+    'not_null': NotNull,
+    'in': In,
+    'not_in': NotIn,
+    'neq': NotEqualTo,
+}
+```
+
+## Examples
+
+### StartsWith - the equivalent of SQL's "like 'substring%'":
 
 Suppose we want to retrieve all records where the name column contains "metric". Using direct PyIceberg objects -
 
@@ -25,7 +64,7 @@ structured_conditions = {
 ```
 
 
-## GreaterThan:
+### GreaterThan:
 
 Let's assume our table has a column created_at that stores timestamps. We can retrieve all records created in the last 7 days using GreaterThan. Using direct PyIceberg objects -
 
@@ -55,7 +94,7 @@ structured_conditions = {
 }
 ```
 
-## Multiple conditions:
+### Multiple conditions:
 
 Imagine we have a category column, and we want to retrieve all records where category is "A" and value is greater than 20. Using direct PyIceberg objects -
 
@@ -84,7 +123,7 @@ structured_conditions = {
 ```
 
 
-## Find Null or Missing Values:
+### Find Null or Missing Values:
 
 If a dataset has missing or null values in a column, we can use IsNull to find them. Using direct PyIceberg objects -
 
@@ -108,7 +147,7 @@ structured_conditions = {
 ```
 
 
-## Find Null or Missing Values:
+### Query Using a List of IDs (IN Clause):
 
 To retrieve records matching multiple IDs at once, use In. Using direct PyIceberg objects -
 

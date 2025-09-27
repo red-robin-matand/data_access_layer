@@ -1,7 +1,11 @@
 import pyarrow as pa
-from typing import Union
 from pyiceberg.catalog import Catalog
-from pyiceberg.expressions import StartsWith, And, Or, EqualTo, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, BooleanExpression
+from pyiceberg.expressions import (
+    And, Or, BooleanExpression,
+    StartsWith, NotStartsWith, 
+    EqualTo, NotEqualTo, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, 
+    IsNull, In, NotIn, NotNull,
+)
 from data_access_layer.datasources import DataLakeDataSource
 from data_access_layer.connections import IcebergGlueConnection
 from data_access_layer.datasources.exceptions import DataLakeDatasourceError
@@ -110,6 +114,12 @@ class IcebergDataSource(DataLakeDataSource):
             'gte': GreaterThanOrEqual,
             'lte': LessThanOrEqual,
             'starts_with': StartsWith,
+            'not_starts_with': NotStartsWith,
+            'is_null': IsNull,
+            'not_null': NotNull,
+            'in': In,
+            'not_in': NotIn,
+            'neq': NotEqualTo,
         }
         for column_name, column_condition in structured_conditions['and'].items():
             for operator, value in column_condition.items():
