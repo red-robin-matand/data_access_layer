@@ -1,7 +1,7 @@
-import pandas as pd
 import pyarrow as pa
 from typing import Union
 from pyiceberg.catalog import Catalog
+from pyiceberg.expressions import StartsWith, And, Or, Not, EqualTo, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, BooleanExpression
 from data_access_layer.datasources import DataLakeDataSource
 from data_access_layer.connections import IcebergGlueConnection
 from data_access_layer.datasources.exceptions import DataLakeDatasourceError
@@ -14,7 +14,6 @@ class IcebergGlueDataSource(DataLakeDataSource):
         super().__init__(connection)
         self._connection_engine : Catalog
         self.allowed_data_types_for_append = [
-            pd.DataFrame,
             pa.Table,
         ]
         
@@ -80,22 +79,16 @@ class IcebergGlueDataSource(DataLakeDataSource):
             message = f"Error getting table '{namespace}.{table_name}' info : {str(e)}"
             raise DataLakeDatasourceError(message)
         
-    def read_table(self, namespace: str, table_name: str, columns=None, filters=None, snapshot_id=None, limit: int = 100, return_pandas : bool =False) -> Union[pa.Table,pd.DataFrame]:
+    def _read_table(self, namespace: str, table_name: str, columns: list = None, filters: BooleanExpression =None, snapshot_id : str =None, limit: int = 100) -> pa.Table:
         try:
             table = self._connection_engine.load_table(f"{namespace}.{table_name}")
-            scan = table.scan()
-            if snapshot_id:
-                scan = scan.at_snapshot(snapshot_id)
+            scan = table.scan(
+                snapshot_id=snapshot_id,
+            )
             if columns:
                 scan = scan.select(columns)
             if filters:
                 scan = scan.filter(filters)
-
-            if return_pandas:
-                df = scan.to_pandas()
-                if limit and len(df) > limit:
-                    df = df.head(limit)
-                return df
             
             table = scan.to_arrow()
             if limit and len(table) > limit:
@@ -106,55 +99,32 @@ class IcebergGlueDataSource(DataLakeDataSource):
             message = f"Error reading table '{namespace}.{table_name}' : {str(e)}"
             raise DataLakeDatasourceError(message)
 
+    def _handle_structured_conditions(self, structured_conditions: dict) -> BooleanExpression:
+
+        filters = {}
+        for column_name, column_condition in structured_conditions.items():
+            for operator, values in column_condition.items():
+                conditions = []
+                
+
+    def read_table(self, namespace: str, table_name: str, columns=None, structured_conditions : dict = None, filters: dict =None, snapshot_id=None, limit: int = 100) -> pa.Table:
+        if structured_conditions and filters:
+            raise ValueError("Cannot use both structured_conditions and filters at the same time.")
+
     def validate_data(self, data) ->None:
 
         if not any(isinstance(data, dtype) for dtype in self.allowed_data_types_for_append):
             allowed_types = ', '.join([dtype.__name__ for dtype in self.allowed_data_types_for_append])
             raise ValueError(f"Data must be one of the following types: {allowed_types}. Got {type(data)} instead.")    
 
-    def append_to_table(self, namespace: str, table_name: str, data: Union[pd.DataFrame, pa.Table], partition_cols=None) -> None:
+    def append_to_table(self, namespace: str, table_name: str, data: pa.Table) -> None:
         try:
             self.validate_data(data)
-            
             table = self._connection_engine.load_table(f"{namespace}.{table_name}")
-            if isinstance(df, pd.DataFrame):
-                df = pa.Table.from_pandas(df)
+            table.append(data)
             
-            writer = table.new_append()
-            writer.append_dataframe(df)
-            writer.commit()
         except Exception as e:
             message = f"Error appending data to table '{namespace}.{table_name}' : {str(e)}"
-            raise DataLakeDatasourceError(message)
-
-    def overwrite_partitions(self, namespace: str, table_name: str, data: Union[pd.DataFrame, pa.Table], partition_filter: dict) -> None:
-        try:
-            self.validate_data(data)
-
-            table = self._connection_engine.load_table(f"{namespace}.{table_name}")
-            if isinstance(df, pd.DataFrame):
-                df = pa.Table.from_pandas(df)
-            
-            writer = table.new_replace_partitions()
-            writer.overwrite_partition(partition_filter, df)
-            writer.commit()
-        except Exception as e:
-            message = f"Error overwriting partitions in table '{namespace}.{table_name}' : {str(e)}"
-            raise DataLakeDatasourceError(message)
-
-    def overwrite_table(self, namespace: str, table_name: str, data: Union[pd.DataFrame, pa.Table]) -> None:
-        try:
-            self.validate_data(data)
-
-            table = self._connection_engine.load_table(f"{namespace}.{table_name}")
-            if isinstance(df, pd.DataFrame):
-                df = pa.Table.from_pandas(df)
-            
-            writer = table.new_overwrite()
-            writer.overwrite(df)
-            writer.commit()
-        except Exception as e:
-            message = f"Error overwriting table '{namespace}.{table_name}' : {str(e)}"
             raise DataLakeDatasourceError(message)
 
     def add_columns_to_schema(self, table, new_fields: list) -> None:

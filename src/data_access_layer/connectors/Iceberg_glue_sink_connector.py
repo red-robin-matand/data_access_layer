@@ -55,7 +55,6 @@ class IcebergGlueSinkConnector(SinkConnector):
                 namespace=self.namespace,
                 table_name=self.table,
                 data=data,
-                partition_cols=self.partition_columns,
             )
 
     def source_to_sink(self):
@@ -72,3 +71,14 @@ class IcebergGlueSinkConnector(SinkConnector):
             self._stop_event.set()
         finally:
             self.disconnect()
+
+    def setup(self) -> None:
+        
+        self._sink.create_namespace(self.namespace)
+        self._sink.create_table(
+            namespace=self.namespace,
+            table_name=self.table,
+            schema=self.schema,
+            partition_spec=self.partition_spec,
+            properties=self.properties,
+        )
