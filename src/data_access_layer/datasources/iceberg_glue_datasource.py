@@ -1,7 +1,7 @@
 import pyarrow as pa
 from typing import Union
 from pyiceberg.catalog import Catalog
-from pyiceberg.expressions import StartsWith, And, Or, Not, EqualTo, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, BooleanExpression
+from pyiceberg.expressions import StartsWith, And, Or, EqualTo, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, BooleanExpression
 from data_access_layer.datasources import DataLakeDataSource
 from data_access_layer.connections import IcebergGlueConnection
 from data_access_layer.datasources.exceptions import DataLakeDatasourceError
@@ -79,7 +79,7 @@ class IcebergGlueDataSource(DataLakeDataSource):
             message = f"Error getting table '{namespace}.{table_name}' info : {str(e)}"
             raise DataLakeDatasourceError(message)
         
-    def _read_table(self, namespace: str, table_name: str, columns: list = None, filters: BooleanExpression =None, snapshot_id : str =None, limit: int = 100) -> pa.Table:
+    def _read_table(self, namespace: str, table_name: str, columns: list, filters: BooleanExpression, snapshot_id : str, limit: int) -> pa.Table:
         try:
             table = self._connection_engine.load_table(f"{namespace}.{table_name}")
             scan = table.scan(
@@ -101,15 +101,59 @@ class IcebergGlueDataSource(DataLakeDataSource):
 
     def _handle_structured_conditions(self, structured_conditions: dict) -> BooleanExpression:
 
-        filters = {}
-        for column_name, column_condition in structured_conditions.items():
-            for operator, values in column_condition.items():
-                conditions = []
-                
+        and_conditions = []
+        or_conditions = []
+        string_to_pyiceberg_operator = {
+            'eq': EqualTo,
+            'gt': GreaterThan,
+            'lt': LessThan,
+            'gte': GreaterThanOrEqual,
+            'lte': LessThanOrEqual,
+            'starts_with': StartsWith,
+        }
+        for column_name, column_condition in structured_conditions['and'].items():
+            for operator, value in column_condition.items():
+                if operator not in string_to_pyiceberg_operator:
+                    raise ValueError(f"Unsupported operator '{operator}' in structured_conditions.")
+                pyiceberg_operator = string_to_pyiceberg_operator[operator]
+                subcondition = pyiceberg_operator(column_name, value) 
+                and_conditions.append(subcondition)
+        
+        for column_name, column_condition in structured_conditions['or'].items():
+            for operator, value in column_condition.items():
+                if operator not in string_to_pyiceberg_operator:
+                    raise ValueError(f"Unsupported operator '{operator}' in structured_conditions.")
+                pyiceberg_operator = string_to_pyiceberg_operator[operator]
+                subcondition = pyiceberg_operator(column_name, value)
+                or_conditions.append(subcondition)
 
+        if len(and_conditions)>0 and len(or_conditions)>0:
+            return And(*and_conditions, Or(*or_conditions))
+        
+        if len(and_conditions)>0:
+            return And(*and_conditions)
+        
+        if len(or_conditions)>0:
+            return Or(*or_conditions)
+        
+        raise ValueError("structured_conditions must contain at least one 'and' or 'or' condition.")
+                
     def read_table(self, namespace: str, table_name: str, columns=None, structured_conditions : dict = None, filters: dict =None, snapshot_id=None, limit: int = 100) -> pa.Table:
-        if structured_conditions and filters:
+        if (not structured_conditions is None) and (not filters is None):
             raise ValueError("Cannot use both structured_conditions and filters at the same time.")
+        
+        if not structured_conditions is None:
+            filters = self._handle_structured_conditions(structured_conditions)
+
+        return self._read_table(
+            namespace=namespace,
+            table_name=table_name,  
+            columns=columns,
+            filters=filters,
+            snapshot_id=snapshot_id,
+            limit=limit,
+        )
+
 
     def validate_data(self, data) ->None:
 
