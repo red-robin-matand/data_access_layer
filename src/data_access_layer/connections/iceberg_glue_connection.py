@@ -1,12 +1,12 @@
 from data_access_layer.connections import DataLakeConnection
-from pyiceberg.catalog import load_catalog
+from pyiceberg.catalog.glue import GlueCatalog
+import boto3
 
 class IcebergGlueConnection(DataLakeConnection):
 
     class S3ConfigKeys(DataLakeConnection.ConfigKeys):
         NAME = 'name'
         CATALOG_NAME = 'catalog_name'
-        CATALOG_TYPE = 'catalog_type'
         WAREHOUSE = 'warehouse'
         REGION = 'region'
 
@@ -14,13 +14,12 @@ class IcebergGlueConnection(DataLakeConnection):
         def required_keys(cls):
             return [member.value for member in cls]
 
-    def __init__(self, name: str, catalog_name: str, catalog_type: str, warehouse: str, region: str) -> None:
+    def __init__(self, name: str, catalog_name: str, warehouse: str, region: str) -> None:
         super().__init__(
             name=name,
         )
         self._region = region
         self._catalog_name = catalog_name
-        self._catalog_type = catalog_type
         self._warehouse = warehouse
         self._connection_engine = None
 
@@ -31,20 +30,22 @@ class IcebergGlueConnection(DataLakeConnection):
 
         return cls(
             config[cls.S3ConfigKeys.NAME.value],
-            config[cls.S3ConfigKeys.REGION.value],
             config[cls.S3ConfigKeys.CATALOG_NAME.value],
-            config[cls.S3ConfigKeys.CATALOG_TYPE.value],
             config[cls.S3ConfigKeys.WAREHOUSE.value],
+            config[cls.S3ConfigKeys.REGION.value],
         )
 
     def _create_engine(self) -> None:
-        
-        self._connection_engine = load_catalog(
+
+        client = boto3.client('glue', region_name=self._region)
+
+        self._connection_engine = GlueCatalog(
             name=self._catalog_name,
-            catalog_type=self._catalog_type,
             warehouse=self._warehouse,
             region=self._region,
+            client=client,
         )
+            
 
     def connect(self) -> None:
         self._create_engine()
@@ -61,4 +62,4 @@ class IcebergGlueConnection(DataLakeConnection):
             return False
 
     def create_connection_string(self) -> str:
-        return f"{self._catalog_type}://{self._catalog_name}"
+        return f"glue://{self._catalog_name}"
