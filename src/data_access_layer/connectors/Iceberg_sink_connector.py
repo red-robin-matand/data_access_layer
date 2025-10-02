@@ -15,13 +15,13 @@ from data_access_layer.datasources import (
 
 class IcebergSinkConnector(SinkConnector):
 
-    def __init__(self, name: str, kafka_consumer_connection_name: str,iceberg_glue_connection_name: str, schema: dict, buffer_args: dict,
+    def __init__(self, name: str, kafka_consumer_connection_name: str,iceberg_connection_name: str, schema: dict, buffer_args: dict,
                  partition_columns: list, namespace: str, table: str) -> None:
 
         super().__init__(
             name=name,
             source_name=kafka_consumer_connection_name,
-            sink_name=iceberg_glue_connection_name,
+            sink_name=iceberg_connection_name,
         )
 
         self._source: KafkaConsumerDataSource = None
