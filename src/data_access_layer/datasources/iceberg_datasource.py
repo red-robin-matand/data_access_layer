@@ -83,20 +83,16 @@ class IcebergDataSource(DataLakeDataSource):
             message = f"Error getting table '{namespace}.{table_name}' info : {str(e)}"
             raise DataLakeDatasourceError(message)
         
-    def _read_table(self, namespace: str, table_name: str, columns: list, filters: BooleanExpression, snapshot_id : str, limit: int) -> pa.Table:
+    def _read_table(self, namespace: str, table_name: str, columns: list, row_filter: BooleanExpression, snapshot_id : str, limit: int) -> pa.Table:
         try:
             table = self._connection_engine.load_table(f"{namespace}.{table_name}")
             scan = table.scan(
                 snapshot_id=snapshot_id,
+                row_filter=row_filter,
+                selected_fields=columns,
+                limit=limit,
             )
-            if columns:
-                scan = scan.select(columns)
-            if filters:
-                scan = scan.filter(filters)
-            
             table = scan.to_arrow()
-            if limit and len(table) > limit:
-                table = table.slice(0, limit)
             return table
         
         except Exception as e:
