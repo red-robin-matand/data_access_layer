@@ -2,6 +2,8 @@ import io
 import threading
 import pyarrow as pa
 from fastavro import reader
+from pyiceberg.schema import Schema, NestedField, StringType, LongType, DoubleType, BooleanType
+from pyiceberg.types import FloatType, IntegerType
 from data_access_layer.connectors import (
     SinkConnector,
     MessageBuffer,
@@ -30,6 +32,7 @@ class IcebergSinkConnector(SinkConnector):
 
         self.schema = schema
         self._pa_schema : pa.schema = None
+        self._iceberg_schema : Schema = None
         self.buffer_args = buffer_args
         self.partition_columns = partition_columns
         self._partition_spec = None
@@ -38,12 +41,16 @@ class IcebergSinkConnector(SinkConnector):
         self.n_messages = 1000
         self._stop_event = threading.Event()
 
-        self.get_buffer()
         self.get_pa_schema()
-        self.get_partition_spec()
+        self.get_iceberg_schema()
+        self.get_buffer()
 
     def get_buffer(self) -> None:
-        self._buffer = MessageBuffer(**self.buffer_args)
+        args = {
+            "schema": self._pa_schema,
+            **self.buffer_args,
+        }
+        self._buffer = MessageBuffer(**args)
 
     def get_pa_schema(self) -> None:
         fields = []
@@ -85,6 +92,38 @@ class IcebergSinkConnector(SinkConnector):
 
         self._pa_schema = pa.schema(fields)
 
+    def get_iceberg_schema(self) -> None:
+        fields = []
+        field_id = 1
+        for field in self.schema['fields']:
+            name = field['name']
+            avro_type = field['type']
+            
+            if isinstance(avro_type, list):
+                if 'null' in avro_type:
+                    avro_type.remove('null')
+                avro_type = avro_type[0]
+
+            if avro_type == 'string':
+                iceberg_type = StringType()
+            elif avro_type == 'int':
+                iceberg_type = IntegerType()
+            elif avro_type == 'long':
+                iceberg_type = LongType()
+            elif avro_type == 'float':
+                iceberg_type = FloatType()
+            elif avro_type == 'double':
+                iceberg_type = DoubleType()
+            elif avro_type == 'boolean':
+                iceberg_type = BooleanType()
+            else:
+                raise ValueError(f"Unsupported Avro type: {avro_type}")
+            
+            fields.append(NestedField(field_id, name, iceberg_type, True))
+            field_id += 1
+
+        self._iceberg_schema = Schema(*fields)
+
     def get_partition_spec(self) -> None:
         
         if len(self.partition_columns) == 0:
@@ -92,7 +131,7 @@ class IcebergSinkConnector(SinkConnector):
         
         self._partition_spec = self._sink.get_partition_spec_from_partition_columns_and_schema(
             partition_columns=self.partition_columns,
-            schema=self._pa_schema,
+            schema=self._iceberg_schema,
         )
 
     def decode_avro(self, value: bytes) -> dict:
@@ -117,8 +156,9 @@ class IcebergSinkConnector(SinkConnector):
             while not self._stop_event.is_set():
                 batch = self._source.consume(
                     n_messages=self.n_messages,
-                    timeout=500,  
+                    timeout=5,  
                 )
+                print(f"Consumed {len(batch)} messages from Kafka.")
                 for message in batch:
                     self.handle_message(message=message)
         except KeyboardInterrupt:
@@ -129,10 +169,15 @@ class IcebergSinkConnector(SinkConnector):
 
     def setup(self) -> None:
         
-        self._sink.create_namespace(self.namespace)
-        self._sink.create_table(
-            namespace=self.namespace,
-            table_name=self.table,
-            schema=self._pa_schema,
-            partition_spec=self._partition_spec,
-        )
+        namespaces = self._sink.list_namespaces()
+        if self.namespace not in namespaces:
+            self._sink.create_namespace(self.namespace)
+
+        tables = self._sink.list_tables(self.namespace)
+        if self.table not in tables:
+            self._sink.create_table(
+                namespace=self.namespace,
+                table_name=self.table,
+                schema=self._iceberg_schema,
+                partition_spec=self._partition_spec,
+            )
