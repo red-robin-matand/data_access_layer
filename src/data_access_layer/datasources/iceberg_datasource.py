@@ -6,7 +6,8 @@ from pyiceberg.expressions import (
     EqualTo, NotEqualTo, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, 
     IsNull, In, NotIn, NotNull,
 )
-from pyiceberg.partitioning import PartitionSpec, IdentityTransform
+from pyiceberg.partitioning import PartitionSpec, PartitionField, IdentityTransform
+from pyiceberg.schema import Schema
 from data_access_layer.datasources import DataLakeDataSource
 from data_access_layer.connections import IcebergGlueConnection
 from data_access_layer.datasources.exceptions import DataLakeDatasourceError
@@ -24,7 +25,8 @@ class IcebergDataSource(DataLakeDataSource):
         
     def list_namespaces(self) -> list:
         try:
-            return self._connection_engine.list_namespaces()
+            response = self._connection_engine.list_namespaces()
+            return [t[0] for t in response]
         except Exception as e:
             message = f"Error listing namespaces: {str(e)}"
             raise DataLakeDatasourceError(message)
@@ -38,7 +40,8 @@ class IcebergDataSource(DataLakeDataSource):
 
     def list_tables(self, namespace: str) -> list:
         try:
-            return self._connection_engine.list_tables(namespace)
+            response = self._connection_engine.list_tables(namespace)
+            return [tup[1] for tup in response]
         except Exception as e:
             message = f"Error listing tables for namesapce: '{namespace}' : {str(e)}"
             raise DataLakeDatasourceError(message)
@@ -51,7 +54,7 @@ class IcebergDataSource(DataLakeDataSource):
             message = f"Error getting schema for table '{namespace}.{table_name}' : {str(e)}"
             raise DataLakeDatasourceError(message)
 
-    def create_table(self, namespace: str, table_name: str, schema: pa.schema, partition_spec: PartitionSpec = None) -> None:
+    def create_table(self, namespace: str, table_name: str, schema: Schema, partition_spec: PartitionSpec = None) -> None:
         try:
             self._connection_engine.create_table(
                 identifier=f"{namespace}.{table_name}",
@@ -197,12 +200,27 @@ class IcebergDataSource(DataLakeDataSource):
             delete_filter=delete_filter,
         )
 
-    def get_partition_spec_from_partition_columns_and_schema(self, partition_columns: list, schema: pa.schema) -> PartitionSpec:
+    def get_partition_spec_from_partition_columns_and_schema(self, partition_columns: list, schema: Schema) -> PartitionSpec:
+        if len(partition_columns) == 0:
+            return None
+
+        partition_fields = []
+        next_partition_field_id = 1
+
         for col in partition_columns:
-            if col not in schema.names:
-                raise ValueError(f"Partition column '{col}' not found in schema fields.")
-        
-        
-        transforms = [IdentityTransform(col) for col in partition_columns]
-        partition_spec = PartitionSpec(schema, transforms)
-        return partition_spec
+            field = schema.find_field(col)
+            if field is None:
+                raise ValueError(f"Partition column '{col}' not found in schema.")
+            
+            partition_fields.append(
+                PartitionField(
+                    source_id=field.field_id,
+                    field_id=next_partition_field_id,
+                    name=f"{col}_partition",
+                    transform=IdentityTransform()
+                )
+            )
+            next_partition_field_id += 1
+
+        return PartitionSpec(*partition_fields)
+    
