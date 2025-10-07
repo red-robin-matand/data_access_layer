@@ -73,7 +73,7 @@ class S3SourceConnector(SourceConnector):
 
         return messages
     
-    def produce_messages_from_df_path_w_mod(self, path : str, schema : dict, key_columns : list, partition_column : str, mod_func : function) -> None:
+    def produce_messages_from_df_path_w_mod(self, path : str, schema : dict, key_columns : list, partition_column : str, mod_func) -> None:
 
         df = self.read_df_from_path(path=path)
         df = mod_func(df)
@@ -132,7 +132,7 @@ class S3SourceConnector(SourceConnector):
             back_pressure_threshold=10000,
         )
     
-    def produce_from_large_dataset_w_mod(self, object_name : str, download_path : str, schema : dict, key_columns : list, partition_column : str, mod_func : function) -> None:
+    def produce_from_large_dataset_w_mod(self, object_name : str, download_path : str, schema : dict, key_columns : list, partition_column : str, mod_func) -> None:
         
         local_dir = os.path.dirname(download_path)
         if not os.path.exists(local_dir):
