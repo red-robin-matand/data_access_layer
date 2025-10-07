@@ -12,9 +12,6 @@ from data_access_layer.datasources import (
     KafkaProducerDataSource,
 )
 
-from fastavro import reader
-import io
-
 class S3SourceConnector(SourceConnector):
 
     def __init__(self, name : str, s3_connection_name : str, kafka_producer_connection_name: str) -> None:
