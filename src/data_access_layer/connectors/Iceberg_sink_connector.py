@@ -158,7 +158,9 @@ class IcebergSinkConnector(SinkConnector):
                     n_messages=self.n_messages,
                     timeout=5,  
                 )
-                print(f"Consumed {len(batch)} messages from Kafka.")
+                if len(batch) == 0:
+                    print("No messages received, waiting...")
+                    continue
                 for message in batch:
                     self.handle_message(message=message)
         except KeyboardInterrupt:
