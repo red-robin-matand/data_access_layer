@@ -75,6 +75,42 @@ class S3SourceConnector(SourceConnector):
             })
 
         return messages
+    
+    def produce_messages_from_df_path_w_mod(self, path : str, schema : dict, key_columns : list, partition_column : str, mod_func : function) -> None:
+
+        df = self.read_df_from_path(path=path)
+        df = mod_func(df)
+        parsed_schema = parse_schema(schema)
+
+        messages = []
+        for row in tqdm(df.itertuples(index=False), desc='building and producing messages', total=df.shape[0]):
+            record = row._asdict()
+
+            buffer = BytesIO()
+            writer(buffer, parsed_schema, [record])
+            avro_bytes = buffer.getvalue()
+
+            key = ':'.join([str(record[col]) for col in key_columns])
+            partition = int(record[partition_column] % self._sink._partitions)
+
+            messages.append({
+                "key": key,
+                "value": avro_bytes,
+                "partition": partition,
+            })
+
+            if len(messages) >= 10000:
+                self._sink.batch_produce(
+                    messages=messages,
+                    back_pressure_threshold=10000,
+                )
+                messages = []
+
+        if len(messages) > 0:
+            self._sink.batch_produce(
+                messages=messages,
+                back_pressure_threshold=10000,
+            )
 
     def produce_from_object(self, object_name : str, download_path : str, schema : dict, key_columns : list, partition_column : str) -> None:
         
@@ -98,4 +134,22 @@ class S3SourceConnector(SourceConnector):
             messages=messages,
             back_pressure_threshold=10000,
         )
+    
+    def produce_from_large_dataset_w_mod(self, object_name : str, download_path : str, schema : dict, key_columns : list, partition_column : str, mod_func : function) -> None:
         
+        local_dir = os.path.dirname(download_path)
+        if not os.path.exists(local_dir):
+            os.makedirs(local_dir)
+
+        self.download_file(
+            object_name=object_name,
+            download_path=download_path,
+        )
+
+        self.produce_messages_from_df_path_w_mod(
+            path=download_path,
+            schema=schema,
+            key_columns=key_columns,
+            partition_column=partition_column,
+            mod_func=mod_func,
+        )
