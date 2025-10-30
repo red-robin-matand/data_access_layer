@@ -1,5 +1,5 @@
 import pyarrow as pa
-from pyiceberg.catalog import Catalog
+from pyiceberg.catalog import Catalog, Table
 from pyiceberg.expressions import (
     And, Or, BooleanExpression,
     StartsWith, NotStartsWith, 
@@ -169,7 +169,22 @@ class IcebergDataSource(DataLakeDataSource):
             allowed_types = ', '.join([dtype.__name__ for dtype in self.allowed_data_types_for_append])
             raise ValueError(f"Data must be one of the following types: {allowed_types}. Got {type(data)} instead.")    
 
-    def append_to_table(self, namespace: str, table_name: str, data: pa.Table) -> None:
+    def load_table(self, namespace: str, table_name: str) -> Table:
+        table = self._connection_engine.load_table(f"{namespace}.{table_name}")
+        return table
+
+    def append_to_table(self, table: Table, data: pa.Table) -> None:
+        try:
+            self.validate_data(data)
+            writer = table.new_append()
+            writer.add_data_file(data)
+            writer.commit()
+            
+        except Exception as e:
+            message = f"Error appending data to table '{table._identifier}' : {str(e)}"
+            raise DataLakeDatasourceError(message)
+        
+    def append_to_table_deprecated(self, namespace: str, table_name: str, data: pa.Table) -> None:
         try:
             self.validate_data(data)
             table = self._connection_engine.load_table(f"{namespace}.{table_name}")
@@ -178,7 +193,7 @@ class IcebergDataSource(DataLakeDataSource):
         except Exception as e:
             message = f"Error appending data to table '{namespace}.{table_name}' : {str(e)}"
             raise DataLakeDatasourceError(message)
-
+        
     def _delete_from_table(self, namespace: str, table_name: str, delete_filter: BooleanExpression) -> None:
         try:
             table = self._connection_engine.load_table(f"{namespace}.{table_name}")
