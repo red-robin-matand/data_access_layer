@@ -4,6 +4,7 @@ import pyarrow as pa
 from fastavro import reader
 from pyiceberg.schema import Schema, NestedField, StringType, LongType, DoubleType, BooleanType
 from pyiceberg.types import FloatType, IntegerType
+from pyiceberg.catalog import Table
 from data_access_layer.connectors import (
     SinkConnector,
     MessageBuffer,
@@ -18,7 +19,7 @@ from data_access_layer.datasources import (
 class IcebergSinkConnector(SinkConnector):
 
     def __init__(self, name: str, kafka_consumer_connection_name: str,iceberg_connection_name: str, schema: dict, buffer_args: dict,
-                 partition_columns: list, namespace: str, table: str) -> None:
+                 partition_columns: list, namespace: str, table_name: str) -> None:
 
         super().__init__(
             name=name,
@@ -37,7 +38,7 @@ class IcebergSinkConnector(SinkConnector):
         self.partition_columns = partition_columns
         self._partition_spec = None
         self.namespace = namespace
-        self.table = table
+        self.table_name = table_name
         self.n_messages = 1000
         self._stop_event = threading.Event()
 
@@ -147,11 +148,21 @@ class IcebergSinkConnector(SinkConnector):
             data = self._buffer.flush_as_arrow_table()
             self._sink.append_to_table(
                 namespace=self.namespace,
-                table_name=self.table,
+                table_name=self.table_name,
                 data=data,
             )
 
-    def source_to_sink(self):
+    def handle_batch(self, batch: list, table : Table) -> None:
+        records = [self.decode_avro(m.value()) for m in batch]
+        self._buffer.extend(records)
+        if self._buffer.should_flush():
+            data = self._buffer.flush_as_arrow_table()
+            self._sink.append_to_table(
+                table=table,
+                data=data,
+            )
+
+    def source_to_sink_deprecated(self):
         try:
             while not self._stop_event.is_set():
                 batch = self._source.consume(
@@ -169,6 +180,30 @@ class IcebergSinkConnector(SinkConnector):
         finally:
             self.disconnect()
 
+    def source_to_sink(self):
+        try:
+            table = self._sink.load_table(
+                namespace=self.namespace,
+                table_name=self.table_name
+            )
+            while not self._stop_event.is_set():
+                batch = self._source.consume(
+                    n_messages=self.n_messages,
+                    timeout=5,  
+                )
+                if len(batch) == 0:
+                    print("No messages received, waiting...")
+                    continue
+                self.handle_batch(
+                    batch=batch,
+                    table=table,
+                )
+        except KeyboardInterrupt:
+            print("Received Ctrl+C, stopping gracefully...")
+            self._stop_event.set()
+        finally:
+            self.disconnect()
+
     def setup(self) -> None:
         
         namespaces = self._sink.list_namespaces()
@@ -176,10 +211,10 @@ class IcebergSinkConnector(SinkConnector):
             self._sink.create_namespace(self.namespace)
 
         tables = self._sink.list_tables(self.namespace)
-        if self.table not in tables:
+        if self.table_name not in tables:
             self._sink.create_table(
                 namespace=self.namespace,
-                table_name=self.table,
+                table_name=self.table_name,
                 schema=self._iceberg_schema,
                 partition_spec=self._partition_spec,
             )
