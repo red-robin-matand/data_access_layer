@@ -30,8 +30,16 @@ class MessageBuffer:
         self._last_flush = time.time()
         return data
 
-    def flush_as_arrow_table(self) -> pa.Table:
+    def flush_as_arrow_table_deprecated(self) -> pa.Table:
         table = pa.Table.from_pylist(self._buffer, schema=self.schema)
+        self._buffer = []
+        self._last_flush = time.time()
+        return table
+    
+    def flush_as_arrow_table(self) -> pa.Table:
+        columns = {k: [r[k] for r in self._buffer] for k in self.schema.names}
+        arrays = [pa.array(v, type=self.schema.field(i).type) for i, v in enumerate(columns.values())]
+        table = pa.Table.from_arrays(arrays, schema=self.schema)
         self._buffer = []
         self._last_flush = time.time()
         return table
