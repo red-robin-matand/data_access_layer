@@ -15,6 +15,11 @@ class KafkaConsumerConnection(KafkaConnection):
         SASL = 'sasl'
         SASL_USERNAME = 'sasl_username'
         SASL_PASSWORD = 'sasl_password'
+        FETCH = 'fetch'
+        FETCH_MIN_BYTES = 'fetch_min_bytes'
+        FETCH_WAIT_MAX_MS = 'fetch_wait_max_ms'
+        QUEUED_MAX_MESSAGES_KBYTES = 'queued_max_messages_kbytes'
+        ENABLE_AUTO_COMMIT = 'enable_auto_commit'
 
         @classmethod
         def required_keys(cls):
@@ -22,10 +27,18 @@ class KafkaConsumerConnection(KafkaConnection):
                 cls.SASL.value,
                 cls.SASL_USERNAME.value,
                 cls.SASL_PASSWORD.value,
+                cls.FETCH.value,
+                cls.FETCH_MIN_BYTES.value,
+                cls.FETCH_WAIT_MAX_MS.value,
+                cls.QUEUED_MAX_MESSAGES_KBYTES.value,
+                cls.ENABLE_AUTO_COMMIT.value,
             ]]
 
     def __init__(self, name: str, broker: str, topic: str, group_id: str, offset: str,
-                 sasl_username: str = None, sasl_password: str = None) -> None:
+                 sasl_username: str = None, sasl_password: str = None, 
+                 fetch_min_bytes : str = int, fetch_wait_max_ms : int = None,
+                 queued_max_messages_kbytes : int = None, enable_auto_commit : bool = None
+                 ) -> None:
         super().__init__(
             name=name,
             broker=broker,
@@ -37,6 +50,10 @@ class KafkaConsumerConnection(KafkaConnection):
         self._sasl = all([sasl_username, sasl_password])
         self._sasl_username = sasl_username
         self._sasl_password = sasl_password
+        self._fetch_min_bytes = fetch_min_bytes
+        self._fetch_wait_max_ms = fetch_wait_max_ms
+        self._queued_max_messages_kbytes = queued_max_messages_kbytes
+        self._enable_auto_commit = enable_auto_commit
 
     @classmethod
     def from_dict(cls, config: dict):
@@ -44,6 +61,7 @@ class KafkaConsumerConnection(KafkaConnection):
         cls.validate_dict_keys(config, config_keys)
 
         sasl_config = config.get(cls.KafkaConfigKeys.SASL.value, {})
+        fetch_config = config.get(cls.KafkaConfigKeys.FETCH.value, {})
 
         return cls(
             name=config[cls.KafkaConfigKeys.NAME.value],
@@ -55,6 +73,14 @@ class KafkaConsumerConnection(KafkaConnection):
                 cls.KafkaConfigKeys.SASL_USERNAME.value, None),
             sasl_password=sasl_config.get(
                 cls.KafkaConfigKeys.SASL_PASSWORD.value, None),
+            fetch_min_bytes = fetch_config.get(
+                cls.KafkaConfigKeys.FETCH_MIN_BYTES.value,None),
+            fetch_wait_max_ms = fetch_config.get(
+                cls.KafkaConfigKeys.FETCH_WAIT_MAX_MS.value,None),
+            queued_max_messages_kbytes = fetch_config.get(
+                cls.KafkaConfigKeys.QUEUED_MAX_MESSAGES_KBYTES.value,None),
+            enable_auto_commit = fetch_config.get(
+                cls.KafkaConfigKeys.ENABLE_AUTO_COMMIT.value,None),
         )
 
     def connect(self):
